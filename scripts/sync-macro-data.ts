@@ -5,8 +5,11 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 const MACRO_SERIES = [
-  { id: 'DGS10', name: 'us10y' }, // 10-Year Treasury Constant Maturity Rate
-  { id: 'M2SL', name: 'm2' },     // M2 Money Stock
+  { id: 'DGS10', name: 'us10y' },        // 10-Year Treasury
+  { id: 'M2SL', name: 'm2' },            // M2 Money Supply
+  { id: 'UNRATE', name: 'unemployment' }, // Unemployment Rate
+  { id: 'CPIAUCSL', name: 'cpi' },       // Consumer Price Index
+  { id: 'BAMLH0A0HYM2', name: 'yield_spread' } // ICE BofA High Yield Index Option-Adjusted Spread
 ];
 
 async function syncMacroData() {
@@ -22,7 +25,6 @@ async function syncMacroData() {
   for (const series of MACRO_SERIES) {
     console.log(`🚀 正在同步 FRED 宏观指标: ${series.id} (${series.name})...`);
     
-    // 获取过去 10 年数据
     const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${series.id}&api_key=${apiKey}&file_type=json`;
 
     try {

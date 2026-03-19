@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { Loader2, Activity } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -12,7 +12,7 @@ import {
 
 type ViewMode = "overview" | "timeline";
 type TimeRange = "3m" | "6m" | "YTD" | "1y" | "3y" | "5y" | "all";
-type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix" | "us10y" | "m2";
+type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix" | "us10y" | "m2" | "unrate" | "cpi" | "spread";
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "3M", value: "3m" }, { label: "6M", value: "6m" }, { label: "YTD", value: "YTD" },
@@ -28,6 +28,9 @@ const INDEX_CONFIG: Record<string, { label: string; short: string; color: string
   vix: { label: "VIX Volatility", short: "VIX", color: "#ec4899", path: "/data/vix-history.json" },
   us10y: { label: "US 10Y Yield", short: "10Y", color: "#10b981", path: "/data/macro/us10y-history.json" },
   m2: { label: "M2 Money Stock", short: "M2", color: "#06b6d4", path: "/data/macro/m2-history.json" },
+  unrate: { label: "Unemployment Rate", short: "UNR", color: "#f43f5e", path: "/data/macro/unemployment-history.json" },
+  cpi: { label: "CPI Inflation", short: "CPI", color: "#fb923c", path: "/data/macro/cpi-history.json" },
+  spread: { label: "HY Yield Spread", short: "HY", color: "#a855f7", path: "/data/macro/yield_spread-history.json" },
 };
 
 export default function SentimentContainer() {
@@ -47,18 +50,18 @@ export default function SentimentContainer() {
     enabled: viewMode === "timeline",
   });
 
-  // 并行获取对比数据
-  const queryMap = useMemo(() => {
-    const queries: any = {};
+  // 动态数据查询 Map
+  const queryResults = useMemo(() => {
+    const results: any = {};
     Object.keys(INDEX_CONFIG).forEach(key => {
       // eslint-disable-next-line react-hooks/rules-of-hooks
-      queries[key] = useQuery({
+      results[key] = useQuery({
         queryKey: ["index-history", key],
         queryFn: async () => (await axios.get(INDEX_CONFIG[key].path)).data,
         enabled: viewMode === "timeline" && selectedIndices.includes(key as any),
       });
     });
-    return queries;
+    return results;
   }, [viewMode, selectedIndices]);
 
   const mergedData = useMemo(() => {
@@ -80,21 +83,19 @@ export default function SentimentContainer() {
     return base.map((d: any) => {
       const entry: any = { ...d };
       selectedIndices.forEach(idx => {
-        const data = queryMap[idx]?.data;
-        if (data) {
-          const match = data.find((item: any) => item.date === d.date || (item.date && item.date.startsWith(d.date)));
-          // 如果是 M2 (月线)，找最近的日期
-          if (!match && idx === "m2") {
-            const m2Match = data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
-            if (m2Match) entry[`price_${idx}`] = m2Match.value || m2Match.close;
-          } else if (match) {
-            entry[`price_${idx}`] = match.value || match.close;
+        const query = queryResults[idx];
+        if (query?.data) {
+          // 对齐逻辑：尝试精准匹配，若无（如月度数据），则匹配月份前缀
+          let match = query.data.find((item: any) => item.date === d.date);
+          if (!match && (idx === "m2" || idx === "unrate" || idx === "cpi")) {
+            match = query.data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
           }
+          if (match) entry[`price_${idx}`] = match.value || match.close;
         }
       });
       return entry;
     });
-  }, [historyData, queryMap, timeRange, selectedIndices]);
+  }, [historyData, queryResults, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
     setSelectedIndices(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -104,7 +105,7 @@ export default function SentimentContainer() {
     return (
       <div className="flex flex-col items-center justify-center py-40 text-slate-300">
         <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-500" />
-        <span className="font-black uppercase text-xs tracking-widest">Macro Syncing...</span>
+        <span className="font-black uppercase text-[10px] tracking-widest">Integrating Macro Assets</span>
       </div>
     );
   }
@@ -120,13 +121,13 @@ export default function SentimentContainer() {
             <>
               <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200/50">
                 {TIME_RANGES.map((r) => (
-                  <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
+                  <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
                 ))}
               </div>
-              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100 flex-wrap max-w-[500px]">
+              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100 flex-wrap max-w-[650px]">
                 {Object.entries(INDEX_CONFIG).map(([key, config]) => (
                   <button key={key} onClick={() => toggleIndex(key as any)} 
-                    className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", selectedIndices.includes(key as any) ? "bg-white shadow-sm shadow-slate-200" : "text-slate-400")}
+                    className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", selectedIndices.includes(key as any) ? "bg-white shadow-sm shadow-slate-200 border border-slate-100" : "text-slate-400 border border-transparent")}
                     style={{ color: selectedIndices.includes(key as any) ? config.color : undefined }}
                   >
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: config.color }} />
@@ -137,7 +138,7 @@ export default function SentimentContainer() {
             </>
           )}
         </div>
-        <div className="bg-slate-900 p-1 rounded-2xl flex gap-1 shadow-xl">
+        <div className="bg-slate-900 p-1 rounded-2xl flex gap-1 shadow-xl shadow-slate-200/50 border border-slate-800">
           <button onClick={() => setViewMode("overview")} className={clsx("px-8 py-2 rounded-xl text-xs font-black transition-all uppercase tracking-widest", viewMode === "overview" ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-300")}>Overview</button>
           <button onClick={() => setViewMode("timeline")} className={clsx("px-8 py-2 rounded-xl text-xs font-black transition-all uppercase tracking-widest", viewMode === "timeline" ? "bg-white text-slate-900 shadow-lg" : "text-slate-500 hover:text-slate-300")}>Timeline</button>
         </div>
@@ -181,15 +182,15 @@ export default function SentimentContainer() {
             </div>
           </motion.div>
         ) : (
-          <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[500px] w-full bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+          <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-[500px] w-full bg-slate-50/50 rounded-2xl p-6 border border-slate-100 shadow-inner">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={mergedData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} minTickGap={50} />
                 <YAxis yAxisId="right" orientation="right" domain={selectedIndices.length === 0 ? ['auto', 'auto'] : [0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} />
-                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} hide={selectedIndices.length === 0} tick={{ fontSize: 10, fill: '#ef4444' }} />
+                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} hide={selectedIndices.length === 0} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '12px' }} />
-                <Legend iconType="circle" />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                 <ReferenceLine yAxisId="right" y={75} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Greed', fill: '#94a3b8', fontSize: 9 }} />
                 <ReferenceLine yAxisId="right" y={25} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Fear', fill: '#94a3b8', fontSize: 9 }} />
                 <Line yAxisId="right" type="monotone" dataKey="value" stroke="#1e293b" strokeWidth={3} dot={(props: any) => {
@@ -219,6 +220,7 @@ function HistoryItem({ label, score }: { label: string, score: any }) {
         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{label}</div>
         <div className="text-[14px] font-black text-slate-800 uppercase tracking-tighter">{rating}</div>
       </div>
+      <div className="absolute left-0 right-0 top-1/2 border-b border-dotted border-slate-200 -z-0" />
       <div className={clsx("z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 bg-white shadow-sm transition-transform group-hover:scale-110",
         val <= 25 ? "text-red-600 border-red-200" : val <= 45 ? "text-orange-500 border-orange-200" : val <= 55 ? "text-yellow-600 border-yellow-200" : "text-green-600 border-green-200")}>
         {Math.round(val)}
