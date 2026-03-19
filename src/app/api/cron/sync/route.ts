@@ -11,12 +11,6 @@ const MACRO_SERIES = [
 ];
 
 export async function GET(request: Request) {
-  // 1. 安全校验：验证 Vercel Cron Secret
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
   const apiKey = process.env.FRED_API_KEY;
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
 
