@@ -10,12 +10,14 @@
     "update-vix": "tsx scripts/update-vix.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1012.0",
     "@tanstack/react-query": "^5.91.2",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.13.6",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "csv-parse": "^6.2.0",
+    "dotenv": "^17.3.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
     "next": "16.2.0",

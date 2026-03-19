@@ -4,10 +4,11 @@ import { useState } from "react";
 import ScreenerContainer from "@/components/screener/screener-container";
 import FinvizContainer from "@/components/screener/finviz-container";
 import SentimentContainer from "@/components/screener/sentiment-container";
-import { BarChart3, PieChart, Activity } from "lucide-react";
+import TiingoContainer from "@/components/tiingo/tiingo-container";
+import { BarChart3, Activity, Database } from "lucide-react";
 import { clsx } from "clsx";
 
-type DataSource = "tradingview" | "finviz" | "sentiment";
+type DataSource = "tradingview" | "finviz" | "sentiment" | "tiingo";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("tradingview");
@@ -18,55 +19,55 @@ export default function Home() {
         <div className="container mx-auto px-4 flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shadow-lg shadow-blue-100">
                 <BarChart3 className="text-white w-5 h-5" />
               </div>
-              <span className="font-bold text-xl tracking-tight">MarketScreener</span>
+              <span className="font-black text-xl tracking-tighter text-slate-800 italic">MS</span>
             </div>
             
-            <div className="hidden md:flex items-center bg-muted p-1 rounded-lg">
-              <button
-                onClick={() => setSource("tradingview")}
-                className={clsx(
-                  "px-4 py-1.5 rounded-md text-sm font-semibold transition-all",
-                  source === "tradingview" ? "bg-white shadow-sm text-blue-600" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                TradingView
-              </button>
-              <button
-                onClick={() => setSource("finviz")}
-                className={clsx(
-                  "px-4 py-1.5 rounded-md text-sm font-semibold transition-all",
-                  source === "finviz" ? "bg-white shadow-sm text-blue-600" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Finviz (Scraper)
-              </button>
-              <button
-                onClick={() => setSource("sentiment")}
-                className={clsx(
-                  "px-4 py-1.5 rounded-md text-sm font-semibold transition-all flex items-center gap-2",
-                  source === "sentiment" ? "bg-white shadow-sm text-blue-600" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Activity className="w-4 h-4" />
-                VIX / Fear-Greed
-              </button>
+            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl">
+              <NavTab active={source === "tradingview"} onClick={() => setSource("tradingview")} label="TradingView" />
+              <NavTab active={source === "finviz"} onClick={() => setSource("finviz")} label="Finviz" />
+              <NavTab active={source === "sentiment"} onClick={() => setSource("sentiment")} label="Sentiment" icon={<Activity className="w-3.5 h-3.5" />} />
+              <NavTab active={source === "tiingo"} onClick={() => setSource("tiingo")} label="Tiingo Data" icon={<Database className="w-3.5 h-3.5" />} />
             </div>
           </div>
           
-          <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full border">
-            Market Status: <span className="text-green-600 font-bold">Open</span>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Market Status</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-xs font-black text-slate-700 uppercase">Live Open</span>
+              </div>
+            </div>
           </div>
         </div>
       </nav>
 
-      <div className="py-2">
+      <div className="py-0">
         {source === "tradingview" && <ScreenerContainer />}
         {source === "finviz" && <FinvizContainer />}
         {source === "sentiment" && <SentimentContainer />}
+        {source === "tiingo" && <TiingoContainer />}
       </div>
     </main>
+  );
+}
+
+function NavTab({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon?: any }) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "px-5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 uppercase tracking-wide",
+        active 
+          ? "bg-white shadow-sm text-blue-600" 
+          : "text-slate-500 hover:text-slate-800"
+      )}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
