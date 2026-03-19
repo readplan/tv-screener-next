@@ -6,6 +6,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get("endpoint") || "daily";
     const symbol = searchParams.get("symbol") || "AAPL";
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
     const token = process.env.TIINGO_API_TOKEN;
 
     if (!token) throw new Error("Missing TIINGO_API_TOKEN in environment");
@@ -14,7 +16,11 @@ export async function GET(request: Request) {
     
     // 动态匹配配置中的端点逻辑
     switch (endpoint) {
-      case "daily": url = TIINGO_ENDPOINTS.DAILY.PRICES(symbol); break;
+      case "daily": 
+        url = TIINGO_ENDPOINTS.DAILY.PRICES(symbol);
+        if (startDate) url += `?startDate=${startDate}`;
+        if (endDate) url += `${url.includes('?') ? '&' : '?'}endDate=${endDate}`;
+        break;
       case "daily_meta": url = TIINGO_ENDPOINTS.DAILY.META(symbol); break;
       case "news": url = `${TIINGO_ENDPOINTS.NEWS}?tickers=${symbol}`; break;
       case "crypto": url = TIINGO_ENDPOINTS.CRYPTO.PRICES(symbol); break;

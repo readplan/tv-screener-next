@@ -27,9 +27,13 @@ export default function FinvizContainer() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["finviz-tiingo-data", mode, searchSymbol],
     queryFn: async () => {
-      // 无论是概览还是图表，都请求 daily 价格数据
+      // 无论是概览还是图表，都请求长周期的历史数据 (10年)
       const { data } = await axios.get("/api/proxy/tiingo", {
-        params: { endpoint: "daily", symbol: searchSymbol }
+        params: { 
+          endpoint: "daily", 
+          symbol: searchSymbol,
+          startDate: "2016-01-01" // 获取 10 年数据
+        }
       });
       
       if (data.error) throw new Error(data.details || data.error);
