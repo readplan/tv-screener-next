@@ -1,10 +1,10 @@
 "use client";
 
-import { createChart, ColorType, IChartApi, ISeriesApi, CandlestickData } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, CandlestickSeries } from 'lightweight-charts';
 import React, { useEffect, useRef } from 'react';
 
 interface TVChartProps {
-  data: CandlestickData[];
+  data: any[];
   symbol: string;
 }
 
@@ -21,41 +21,42 @@ export const TVChart = ({ data, symbol }: TVChartProps) => {
       }
     };
 
+    // 1. 创建图表实例
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#64748b',
       },
       grid: {
-        vertLines: { color: '#f1f5f9' },
-        horzLines: { color: '#f1f5f9' },
+        vertLines: { color: '#f8fafc' },
+        horzLines: { color: '#f8fafc' },
       },
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: 450,
       timeScale: {
-        borderColor: '#e2e8f0',
+        borderColor: '#f1f5f9',
         timeVisible: true,
-        secondsVisible: false,
       },
     });
 
-    // 适配最新版 API，使用内置的 addCandlestickSeries 方法
-    // 如果该方法在某些打包环境下不可用，尝试通用的 addSeries 逻辑
-    try {
-      const candlestickSeries = chart.addCandlestickSeries({
-        upColor: '#22c55e',
-        downColor: '#ef4444',
-        borderVisible: false,
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
-      });
+    // 2. 使用 v5 系列规范：addSeries(CandlestickSeries, ...)
+    // 这种写法最稳定，兼容所有 v5.x 版本
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
+    });
 
-      if (data && data.length > 0) {
+    // 3. 填充数据
+    if (data && data.length > 0) {
+      try {
         candlestickSeries.setData(data);
         chart.timeScale().fitContent();
+      } catch (err) {
+        console.error("Data binding error:", err);
       }
-    } catch (e) {
-      console.error("Failed to add candlestick series:", e);
     }
 
     chartRef.current = chart;
@@ -68,16 +69,19 @@ export const TVChart = ({ data, symbol }: TVChartProps) => {
   }, [data]);
 
   return (
-    <div className="relative w-full">
-      <div className="absolute top-4 left-4 z-10">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-slate-800 bg-white/90 backdrop-blur px-3 py-1 rounded-lg border border-slate-100 shadow-sm uppercase tracking-tighter">
-            {symbol} • 1D
+    <div className="relative w-full bg-slate-50/30 rounded-2xl p-4 border border-slate-100">
+      <div className="absolute top-8 left-8 z-10 flex items-center gap-3">
+        <div className="flex flex-col">
+          <span className="text-xl font-black text-slate-900 tracking-tighter uppercase">
+            {symbol}
           </span>
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Daily Candlesticks • Tiingo Data
+          </span>
         </div>
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.4)]" />
       </div>
-      <div ref={chartContainerRef} className="w-full rounded-xl overflow-hidden" />
+      <div ref={chartContainerRef} className="w-full" />
     </div>
   );
 };
