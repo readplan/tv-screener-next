@@ -64,6 +64,21 @@ Terminal X 是一个基于 **Next.js 14+** 构建的高性能金融市场监控�
     *   `npm run update-vix`: 更新实时 VIX 数据。
     *   `npm run convert-history`: 转换 Fear & Greed 历史 CSV。
 
+## 🌐 部署至 Vercel
+
+本项目针对 Vercel 进行了深度优化，您可以轻松实现一键部署：
+
+1.  **关联 GitHub**: 在 Vercel 控制台导入本项目仓库。
+2.  **配置环境变量**: 
+    *   在 Vercel 项目设置的 `Environment Variables` 中，添加 `TIINGO_API_TOKEN`。
+    *   确保该 Token 已在 Tiingo 后台激活。
+3.  **构建设置**: 
+    *   Framework Preset: `Next.js`
+    *   Build Command: `npm run build`
+4.  **自动部署**: 每次推送代码至 `main` 分支，Vercel 将自动触发生产环境构建。
+
+> **注意**: 如果在部署时遇到 TypeScript 类型报错，请确保 `scripts/` 目录下的所有脚本均已通过类型检查（本项目已完成相关修复）。
+
 ## 📄 许可证
 
 本项目采用 MIT 许可证。
