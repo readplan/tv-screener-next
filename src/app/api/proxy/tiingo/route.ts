@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { TIINGO_ENDPOINTS } from "@/lib/tiingo-api-config";
 
 export async function GET(request: Request) {
   try {
@@ -10,38 +11,36 @@ export async function GET(request: Request) {
     if (!token) throw new Error("Missing TIINGO_API_TOKEN in environment");
 
     let url = "";
-    const commonParams = `token=${token}`;
-
+    
+    // 动态匹配配置中的端点逻辑
     switch (endpoint) {
-      case "news":
-        // 2.2 News Endpoint
-        url = `https://api.tiingo.com/tiingo/news?tickers=${symbol}&${commonParams}`;
-        break;
-      case "crypto":
-        // 2.3 Crypto Top of Book / Daily
-        url = `https://api.tiingo.com/tiingo/crypto/prices?tickers=${symbol}&${commonParams}`;
-        break;
-      case "forex":
-        // 2.4 Forex Top of Book
-        url = `https://api.tiingo.com/tiingo/fx/top?tickers=${symbol}&${commonParams}`;
-        break;
-      case "iex":
-        // 2.5 IEX Real-time
-        url = `https://api.tiingo.com/iex/?tickers=${symbol}&${commonParams}`;
-        break;
-      case "fundamentals":
-        // 2.6 Fundamentals Daily Metrics
-        url = `https://api.tiingo.com/tiingo/fundamentals/${symbol}/daily?${commonParams}`;
-        break;
-      case "daily":
-      default:
-        // 2.1 End-of-Day Prices
-        url = `https://api.tiingo.com/tiingo/daily/${symbol}/prices?${commonParams}`;
+      case "daily": url = TIINGO_ENDPOINTS.DAILY.PRICES(symbol); break;
+      case "daily_meta": url = TIINGO_ENDPOINTS.DAILY.META(symbol); break;
+      case "news": url = `${TIINGO_ENDPOINTS.NEWS}?tickers=${symbol}`; break;
+      case "crypto": url = TIINGO_ENDPOINTS.CRYPTO.PRICES(symbol); break;
+      case "crypto_top": url = TIINGO_ENDPOINTS.CRYPTO.TOP(symbol); break;
+      case "forex": url = TIINGO_ENDPOINTS.FOREX.TOP(symbol); break;
+      case "iex": url = TIINGO_ENDPOINTS.IEX.TICKER(symbol); break;
+      case "iex_all": url = TIINGO_ENDPOINTS.IEX.ALL; break;
+      case "fundamentals": url = TIINGO_ENDPOINTS.FUNDAMENTALS.DAILY(symbol); break;
+      case "fundamentals_meta": url = TIINGO_ENDPOINTS.FUNDAMENTALS.META; break;
+      case "fundamentals_defs": url = TIINGO_ENDPOINTS.FUNDAMENTALS.DEFINITIONS; break;
+      case "fundamentals_stmts": url = TIINGO_ENDPOINTS.FUNDAMENTALS.STATEMENTS(symbol); break;
+      case "funds_meta": url = TIINGO_ENDPOINTS.FUNDS.META(symbol); break;
+      case "funds_metrics": url = TIINGO_ENDPOINTS.FUNDS.METRICS(symbol); break;
+      case "dividends": url = TIINGO_ENDPOINTS.DIVIDENDS.TICKER(symbol); break;
+      case "dividends_yield": url = TIINGO_ENDPOINTS.DIVIDENDS.YIELD(symbol); break;
+      case "splits": url = TIINGO_ENDPOINTS.SPLITS.TICKER(symbol); break;
+      case "search": url = TIINGO_ENDPOINTS.SEARCH(symbol); break;
+      default: url = TIINGO_ENDPOINTS.DAILY.PRICES(symbol);
     }
 
-    console.log(`Tiingo Proxy: Fetching ${url}`);
+    const commonParams = `token=${token}`;
+    const finalUrl = `${url}${url.includes('?') ? '&' : '?'}${commonParams}`;
 
-    const response = await fetch(url, {
+    console.log(`Tiingo Proxy [Structured]: Fetching ${finalUrl}`);
+
+    const response = await fetch(finalUrl, {
       headers: { 'Content-Type': 'application/json' },
       next: { revalidate: 300 }
     });

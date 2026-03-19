@@ -1,0 +1,111 @@
+#End-of-Day
+# Meta Data
+https://api.tiingo.com/tiingo/daily/<ticker>
+
+# Latest Price
+https://api.tiingo.com/tiingo/daily/<ticker>/prices
+
+# Historical Prices
+https://api.tiingo.com/tiingo/daily/<ticker>/prices?startDate=2012-1-1&endDate=2016-1-1 
+
+# News Data Endpoint
+https://api.tiingo.com/tiingo/news
+
+#crypto data api
+# Top-of-Book Data for specific tickers
+https://api.tiingo.com/tiingo/crypto/top?tickers=btcusd,fldcbtc
+
+# Real-time (Latest) Data for specific tickers
+https://api.tiingo.com/tiingo/crypto/prices?tickers=btcusd,fldcbtc
+
+# Historical Prices
+https://api.tiingo.com/tiingo/crypto/prices?tickers=btcusd,fldcbtc&startDate=2019-01-02&resampleFreq=5min
+
+Forex API Documentation - Real-time & Historical
+REST Endpoints
+The Forex API Endpoints are currently in beta.
+
+# To request top-of-book/last for specific base and quote pairs, use the following REST endpoint
+https://api.tiingo.com/tiingo/fx/<ticker>/top
+
+# Historical Intraday Prices for base and quote pairs
+https://api.tiingo.com/tiingo/fx/<ticker>/prices?startDate=2019-06-30&resampleFreq=5min
+
+
+IEX
+# To request top-of-book/last for all tickers, use the following REST endpoint
+https://api.tiingo.com/iex
+
+# To request top-of-book/last for specific tickers, use the following REST endpoint
+https://api.tiingo.com/iex/<ticker>
+
+# Historical Intraday Prices
+https://api.tiingo.com/iex/<ticker>/prices?startDate=2019-01-02&resampleFreq=5min
+
+Fundamental Data API Documentation
+REST Endpoints
+Tiingo Fundamental Data API Endpoint is a
+
+# To see the available fundamental metrics, use this endpoint
+https://api.tiingo.com/tiingo/fundamentals/definitions
+
+# To request historical statement data, use this endpoint (ticker for active symbols)
+https://api.tiingo.com/tiingo/fundamentals/<ticker>/statements
+
+# For delisted or recycled symbols, use Tiingo permaTicker (stable identifier)
+https://api.tiingo.com/tiingo/fundamentals/<permaTicker>/statements
+
+# To request historical daily fundamental data, use this endpoint (ticker for active symbols)
+https://api.tiingo.com/tiingo/fundamentals/<ticker>/daily
+
+# For delisted or recycled symbols, use Tiingo permaTicker (stable identifier)
+https://api.tiingo.com/tiingo/fundamentals/<permaTicker>/daily
+
+# To request fundamental meta data, use this endpoint
+https://api.tiingo.com/tiingo/fundamentals/meta
+
+Mutual Fund and ETF Fee Data API Documentation
+REST Endpoints
+
+
+# To obtain top-level fund data, including description and share classes, use the following REST endpoint
+https://api.tiingo.com/tiingo/funds/<ticker>
+
+# To obtain detailed current and historical fee data, use the following REST endpoint
+https://api.tiingo.com/tiingo/funds/<ticker>/metrics
+
+Stock, ETF, and Mutual Funds Dividend API Documentation
+REST Endpoints
+
+# Distribution data batch endpoint
+https://api.tiingo.com/tiingo/corporate-actions/distributions
+
+# Distribution data endpoint for specific ticker
+https://api.tiingo.com/tiingo/corporate-actions/<ticker>/distributions
+
+# Historical timeseries of distribution (dividend) yield
+https://api.tiingo.com/tiingo/corporate-actions/<ticker>/distribution-yield
+
+Stock, ETF, and Mutual Funds Splits API Documentation
+REST Endpoints
+
+# Split data batch endpoint
+https://api.tiingo.com/tiingo/corporate-actions/splits
+
+# Split data endpoint for specific ticker
+https://api.tiingo.com/tiingo/corporate-actions/<ticker>/splits
+
+# Websocket Crypo API Top-of-Book & Last Trade Endpoint
+wss://api.tiingo.com/crypto
+
+# Websocket Forex API Top-of-Book Endpoint
+wss://api.tiingo.com/fx
+
+# Websocket IEX API Reference Price, Top-of-Book, & Last Trade Endpoint
+wss://api.tiingo.com/iex
+
+# Search Endpoint
+https://api.tiingo.com/tiingo/utilities/search/<query>
+# or
+https://api.tiingo.com/tiingo/utilities/search?query=<query>
+

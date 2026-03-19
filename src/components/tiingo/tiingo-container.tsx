@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 
-type TiingoEndpoint = "daily" | "news" | "crypto" | "forex" | "iex" | "fundamentals";
+type TiingoEndpoint = "daily" | "news" | "crypto" | "forex" | "iex" | "fundamentals" | "dividends" | "splits";
 
 export default function TiingoContainer() {
   const [activeEndpoint, setActiveEndpoint] = useState<TiingoEndpoint>("news");
@@ -41,6 +41,8 @@ export default function TiingoContainer() {
             <MenuLink label="2.4 Forex" icon={<Zap className="w-4 h-4"/>} active={activeEndpoint === "forex"} onClick={() => { setSearchSymbol("AUDUSD"); setActiveEndpoint("forex"); }} />
             <MenuLink label="2.5 IEX" icon={<Landmark className="w-4 h-4"/>} active={activeEndpoint === "iex"} onClick={() => setActiveEndpoint("iex")} />
             <MenuLink label="2.6 Fundamentals" icon={<Activity className="w-4 h-4"/>} active={activeEndpoint === "fundamentals"} onClick={() => setActiveEndpoint("fundamentals")} />
+            <MenuLink label="2.8 Dividends" icon={<ArrowUpRight className="w-4 h-4"/>} active={activeEndpoint === "dividends"} onClick={() => setActiveEndpoint("dividends")} />
+            <MenuLink label="2.9 Splits" icon={<ArrowUpRight className="w-4 h-4"/>} active={activeEndpoint === "splits"} onClick={() => setActiveEndpoint("splits")} />
           </nav>
         </div>
 
