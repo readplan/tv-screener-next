@@ -202,8 +202,20 @@ function TradingViewHeatmap() {
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      "exchanges": [], "dataSource": "sp500", "grouping": "sector", "blockSize": "market_cap_basic", "blockColor": "change", "locale": "zh_CN",
-      "symbolUrl": "", "colorTheme": "light", "hasTopBar": false, "isDatasetEnabled": false, "isTransparent": false, "hasSymbolTooltip": true, "width": "100%", "height": "650"
+      "exchanges": [],
+      "dataSource": "sp500",
+      "grouping": "sector",
+      "blockSize": "market_cap_basic",
+      "blockColor": "change",
+      "locale": "zh_CN",
+      "symbolUrl": "",
+      "colorTheme": "light",
+      "hasTopBar": false,
+      "isDatasetEnabled": false,
+      "isTransparent": false,
+      "hasSymbolTooltip": true,
+      "width": "100%",
+      "height": "650"
     });
     container.current.appendChild(script);
     return () => { if (container.current) container.current.innerHTML = ""; };
