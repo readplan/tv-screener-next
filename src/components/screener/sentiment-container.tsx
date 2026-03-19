@@ -12,7 +12,7 @@ import {
 
 type ViewMode = "overview" | "timeline";
 type TimeRange = "3m" | "6m" | "YTD" | "1y" | "3y" | "5y" | "all";
-type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix";
+type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix" | "us10y" | "m2";
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "3M", value: "3m" }, { label: "6M", value: "6m" }, { label: "YTD", value: "YTD" },
@@ -20,12 +20,14 @@ const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "ALL", value: "all" },
 ];
 
-const INDEX_CONFIG: Record<string, { label: string; short: string; color: string; ticker: string }> = {
-  spy: { label: "S&P 500 (SPX)", short: "SPX", color: "#ef4444", ticker: "spy" },
-  qqq: { label: "Nasdaq 100 (NDQ)", short: "NDQ", color: "#3b82f6", ticker: "qqq" },
-  dia: { label: "Dow 30 (DJI)", short: "DJI", color: "#8b5cf6", ticker: "dia" },
-  iwm: { label: "Russell 2000 (RUT)", short: "RUT", color: "#f59e0b", ticker: "iwm" },
-  vix: { label: "VIX Volatility", short: "VIX", color: "#ec4899", ticker: "vix" },
+const INDEX_CONFIG: Record<string, { label: string; short: string; color: string; path: string }> = {
+  spy: { label: "S&P 500 (SPX)", short: "SPX", color: "#ef4444", path: "/data/spy-history.json" },
+  qqq: { label: "Nasdaq 100 (NDQ)", short: "NDQ", color: "#3b82f6", path: "/data/qqq-history.json" },
+  dia: { label: "Dow 30 (DJI)", short: "DJI", color: "#8b5cf6", path: "/data/dia-history.json" },
+  iwm: { label: "Russell 2000 (RUT)", short: "RUT", color: "#f59e0b", path: "/data/iwm-history.json" },
+  vix: { label: "VIX Volatility", short: "VIX", color: "#ec4899", path: "/data/vix-history.json" },
+  us10y: { label: "US 10Y Yield", short: "10Y", color: "#10b981", path: "/data/macro/us10y-history.json" },
+  m2: { label: "M2 Money Stock", short: "M2", color: "#06b6d4", path: "/data/macro/m2-history.json" },
 };
 
 export default function SentimentContainer() {
@@ -35,47 +37,29 @@ export default function SentimentContainer() {
 
   const { data: realTimeData, isLoading: isRealTimeLoading } = useQuery({
     queryKey: ["market-sentiment"],
-    queryFn: async () => {
-      const { data } = await axios.get("/api/proxy/sentiment");
-      return data;
-    },
+    queryFn: async () => (await axios.get("/api/proxy/sentiment")).data,
     refetchInterval: 60000,
   });
 
   const { data: historyData } = useQuery({
     queryKey: ["fear-greed-history"],
-    queryFn: async () => {
-      const { data } = await axios.get("/data/fear-greed-history.json");
-      return data;
-    },
+    queryFn: async () => (await axios.get("/data/fear-greed-history.json")).data,
     enabled: viewMode === "timeline",
   });
 
-  const qSpy = useQuery({
-    queryKey: ["index-history", "spy"],
-    queryFn: async () => (await axios.get("/data/spy-history.json")).data,
-    enabled: viewMode === "timeline" && selectedIndices.includes("spy"),
-  });
-  const qQqq = useQuery({
-    queryKey: ["index-history", "qqq"],
-    queryFn: async () => (await axios.get("/data/qqq-history.json")).data,
-    enabled: viewMode === "timeline" && selectedIndices.includes("qqq"),
-  });
-  const qDia = useQuery({
-    queryKey: ["index-history", "dia"],
-    queryFn: async () => (await axios.get("/data/dia-history.json")).data,
-    enabled: viewMode === "timeline" && selectedIndices.includes("dia"),
-  });
-  const qIwm = useQuery({
-    queryKey: ["index-history", "iwm"],
-    queryFn: async () => (await axios.get("/data/iwm-history.json")).data,
-    enabled: viewMode === "timeline" && selectedIndices.includes("iwm"),
-  });
-  const qVix = useQuery({
-    queryKey: ["index-history", "vix"],
-    queryFn: async () => (await axios.get("/data/vix-history.json")).data,
-    enabled: viewMode === "timeline" && selectedIndices.includes("vix"),
-  });
+  // 并行获取对比数据
+  const queryMap = useMemo(() => {
+    const queries: any = {};
+    Object.keys(INDEX_CONFIG).forEach(key => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      queries[key] = useQuery({
+        queryKey: ["index-history", key],
+        queryFn: async () => (await axios.get(INDEX_CONFIG[key].path)).data,
+        enabled: viewMode === "timeline" && selectedIndices.includes(key as any),
+      });
+    });
+    return queries;
+  }, [viewMode, selectedIndices]);
 
   const mergedData = useMemo(() => {
     if (!historyData) return [];
@@ -93,22 +77,24 @@ export default function SentimentContainer() {
       base = historyData.filter((d: any) => new Date(d.date) >= start);
     }
 
-    const indexDataMap: Record<string, any[]> = {
-      spy: qSpy.data || [], qqq: qQqq.data || [], dia: qDia.data || [], iwm: qIwm.data || [], vix: qVix.data || []
-    };
-
     return base.map((d: any) => {
       const entry: any = { ...d };
       selectedIndices.forEach(idx => {
-        const prices = indexDataMap[idx];
-        if (prices) {
-          const match = prices.find((item: any) => item.date === d.date);
-          if (match) entry[`price_${idx}`] = match.close;
+        const data = queryMap[idx]?.data;
+        if (data) {
+          const match = data.find((item: any) => item.date === d.date || (item.date && item.date.startsWith(d.date)));
+          // 如果是 M2 (月线)，找最近的日期
+          if (!match && idx === "m2") {
+            const m2Match = data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
+            if (m2Match) entry[`price_${idx}`] = m2Match.value || m2Match.close;
+          } else if (match) {
+            entry[`price_${idx}`] = match.value || match.close;
+          }
         }
       });
       return entry;
     });
-  }, [historyData, qSpy.data, qQqq.data, qDia.data, qIwm.data, qVix.data, timeRange, selectedIndices]);
+  }, [historyData, queryMap, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
     setSelectedIndices(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -118,7 +104,7 @@ export default function SentimentContainer() {
     return (
       <div className="flex flex-col items-center justify-center py-40 text-slate-300">
         <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-500" />
-        <span className="font-bold tracking-widest uppercase text-[10px]">Syncing Sentiment Engine</span>
+        <span className="font-black uppercase text-xs tracking-widest">Macro Syncing...</span>
       </div>
     );
   }
@@ -134,10 +120,10 @@ export default function SentimentContainer() {
             <>
               <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200/50">
                 {TIME_RANGES.map((r) => (
-                  <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
+                  <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
                 ))}
               </div>
-              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100">
+              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100 flex-wrap max-w-[500px]">
                 {Object.entries(INDEX_CONFIG).map(([key, config]) => (
                   <button key={key} onClick={() => toggleIndex(key as any)} 
                     className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", selectedIndices.includes(key as any) ? "bg-white shadow-sm shadow-slate-200" : "text-slate-400")}
@@ -233,7 +219,6 @@ function HistoryItem({ label, score }: { label: string, score: any }) {
         <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{label}</div>
         <div className="text-[14px] font-black text-slate-800 uppercase tracking-tighter">{rating}</div>
       </div>
-      <div className="absolute left-0 right-0 top-1/2 border-b border-dotted border-slate-200 -z-0" />
       <div className={clsx("z-10 w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm border-2 bg-white shadow-sm transition-transform group-hover:scale-110",
         val <= 25 ? "text-red-600 border-red-200" : val <= 45 ? "text-orange-500 border-orange-200" : val <= 55 ? "text-yellow-600 border-yellow-200" : "text-green-600 border-green-200")}>
         {Math.round(val)}
