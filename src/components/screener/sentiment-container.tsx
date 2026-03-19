@@ -38,7 +38,7 @@ const INDEX_KEYS = Object.keys(INDEX_CONFIG);
 export default function SentimentContainer() {
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
-  const [selectedIndices, setSelectedIndices] = useState<ComparisonIndex[]>(["spy"]);
+  const [selectedIndices, setSelectedIndices] = useState<ComparisonIndex[]>(["vix"]);
 
   const { data: realTimeData, isLoading: isRealTimeLoading } = useQuery({
     queryKey: ["market-sentiment"],
