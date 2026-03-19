@@ -129,11 +129,11 @@ export default function SentimentContainer() {
                       <text x="273" y="168" textAnchor="middle">100</text>
                     </g>
                     <g className="uppercase font-black tracking-tighter" style={{ fontSize: '11px' }}>
-                      <text x="15" y="120" transform="rotate(-62, 15, 120)" className={clsx(currentScore <= 25 ? "fill-slate-900" : "fill-slate-400/40")}>Extreme Fear</text>
+                      <text x="15" y="120" transform="rotate(-62, 45, 125)" className={clsx(currentScore <= 25 ? "fill-slate-900" : "fill-slate-400/40")}>Extreme Fear</text>
                       <text x="85" y="55" transform="rotate(-35, 85, 55)" className={clsx(currentScore > 25 && currentScore <= 45 ? "fill-slate-900" : "fill-slate-400/40")}>Fear</text>
                       <text x="169" y="35" textAnchor="middle" className={clsx(currentScore > 45 && currentScore <= 55 ? "fill-slate-900" : "fill-slate-400/40")}>Neutral</text>
-                      <text x="220" y="65" transform="rotate(35, 220, 65)" className={clsx(currentScore > 55 && currentScore <= 75 ? "fill-slate-900" : "fill-slate-400/40")}>Greed</text>
-                      <text x="250" y="125" transform="rotate(62, 250, 125)" className={clsx(currentScore > 75 ? "fill-slate-900" : "fill-slate-400/40")}>Extreme Greed</text>
+                      <text x="220" y="65" transform="rotate(35, 255, 55)" className={clsx(currentScore > 55 && currentScore <= 75 ? "fill-slate-900" : "fill-slate-400/40")}>Greed</text>
+                      <text x="250" y="125" transform="rotate(62, 295, 125)" className={clsx(currentScore > 75 ? "fill-slate-900" : "fill-slate-400/40")}>Extreme Greed</text>
                     </g>
                   </svg>
                 </div>
