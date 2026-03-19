@@ -32,6 +32,7 @@ export default function SentimentContainer() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
   const [selectedIndices, setSelectedIndices] = useState<ComparisonIndex[]>(["spy"]);
 
+  // 1. 获取实时情绪 (顶层调用)
   const { data: realTimeData, isLoading: isRealTimeLoading } = useQuery({
     queryKey: ["market-sentiment"],
     queryFn: async () => {
@@ -41,6 +42,7 @@ export default function SentimentContainer() {
     refetchInterval: 60000,
   });
 
+  // 2. 获取情绪历史 (顶层调用)
   const { data: historyData } = useQuery({
     queryKey: ["fear-greed-history"],
     queryFn: async () => {
@@ -50,19 +52,27 @@ export default function SentimentContainer() {
     enabled: viewMode === "timeline",
   });
 
-  // 并行获取选中的所有指数数据
-  const indexQueries = useMemo(() => {
-    return ["spy", "qqq", "dia", "iwm"].map(idx => {
-      return useQuery({
-        queryKey: ["index-history", idx],
-        queryFn: async () => {
-          const { data } = await axios.get(`/data/${idx}-history.json`);
-          return data;
-        },
-        enabled: viewMode === "timeline" && selectedIndices.includes(idx as any),
-      });
-    });
-  }, [viewMode, selectedIndices]);
+  // 3. 固定顺序定义四个指数查询 (核心修复：禁止在 useMemo/Map 内部调用)
+  const qSpy = useQuery({
+    queryKey: ["index-history", "spy"],
+    queryFn: async () => (await axios.get("/data/spy-history.json")).data,
+    enabled: viewMode === "timeline" && selectedIndices.includes("spy"),
+  });
+  const qQqq = useQuery({
+    queryKey: ["index-history", "qqq"],
+    queryFn: async () => (await axios.get("/data/qqq-history.json")).data,
+    enabled: viewMode === "timeline" && selectedIndices.includes("qqq"),
+  });
+  const qDia = useQuery({
+    queryKey: ["index-history", "dia"],
+    queryFn: async () => (await axios.get("/data/dia-history.json")).data,
+    enabled: viewMode === "timeline" && selectedIndices.includes("dia"),
+  });
+  const qIwm = useQuery({
+    queryKey: ["index-history", "iwm"],
+    queryFn: async () => (await axios.get("/data/iwm-history.json")).data,
+    enabled: viewMode === "timeline" && selectedIndices.includes("iwm"),
+  });
 
   const mergedData = useMemo(() => {
     if (!historyData) return [];
@@ -80,21 +90,25 @@ export default function SentimentContainer() {
       base = historyData.filter((d: any) => new Date(d.date) >= start);
     }
 
-    // 聚合选中的指数数据
-    const indexKeys = ["spy", "qqq", "dia", "iwm"];
+    const indexDataMap: Record<string, any[]> = {
+      spy: qSpy.data || [],
+      qqq: qQqq.data || [],
+      dia: qDia.data || [],
+      iwm: qIwm.data || []
+    };
+
     return base.map((d: any) => {
       const entry: any = { ...d };
       selectedIndices.forEach(idx => {
-        const indexIdx = indexKeys.indexOf(idx);
-        const queryResult = indexQueries[indexIdx];
-        if (queryResult?.data) {
-          const match = queryResult.data.find((item: any) => item.date === d.date);
+        const prices = indexDataMap[idx];
+        if (prices) {
+          const match = prices.find((item: any) => item.date === d.date);
           if (match) entry[`price_${idx}`] = match.close;
         }
       });
       return entry;
     });
-  }, [historyData, indexQueries, timeRange, selectedIndices]);
+  }, [historyData, qSpy.data, qQqq.data, qDia.data, qIwm.data, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
     setSelectedIndices(prev => 
@@ -194,7 +208,7 @@ export default function SentimentContainer() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} minTickGap={50} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} />
-                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} hide={selectedIndices.length === 0} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} hide={selectedIndices.length === 0} tick={{ fontSize: 10, fill: '#ef4444' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '12px' }} />
                 <Legend iconType="circle" />
                 <ReferenceLine yAxisId="right" y={75} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Greed', fill: '#94a3b8', fontSize: 9 }} />
