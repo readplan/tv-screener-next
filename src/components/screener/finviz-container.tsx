@@ -12,7 +12,7 @@ type FinvizMode = "heatmap" | "chart";
 type ChartRange = "1d" | "5d" | "1m" | "6m" | "ytd" | "1y" | "5y" | "10y" | "max";
 
 const RANGES: { label: string; value: ChartRange }[] = [
-  { label: "1D", value: "1d" }, { label: "5D", value: "5d" }, { label: "1M", value: "1m" },
+  { label: "1D (Live)", value: "1d" }, { label: "5D", value: "5d" }, { label: "1M", value: "1m" },
   { label: "6M", value: "6m" }, { label: "YTD", value: "ytd" }, { label: "1Y", value: "1y" },
   { label: "5Y", value: "5y" }, { label: "MAX", value: "max" },
 ];
@@ -27,12 +27,14 @@ export default function FinvizContainer() {
 
   useEffect(() => { if (urlSymbol) { setSearchSymbol(urlSymbol); setMode("chart"); } }, [urlSymbol]);
 
-  // 1. 获取历史价格
+  // 1. 获取价格数据 (1D 使用 IEX, 其他使用 Daily)
+  const isLiveMode = range === "1d";
+  
   const startDate = useMemo(() => {
+    if (isLiveMode) return null;
     const now = new Date();
     const start = new Date();
     switch (range) {
-      case "1d": return null;
       case "5d": start.setDate(now.getDate() - 7); break;
       case "1m": start.setMonth(now.getMonth() - 1); break;
       case "6m": start.setMonth(now.getMonth() - 6); break;
@@ -42,33 +44,28 @@ export default function FinvizContainer() {
       case "max": return "1970-01-01";
     }
     return start.toISOString().split('T')[0];
-  }, [range]);
+  }, [range, isLiveMode]);
 
-  const { data: prices, isLoading: isPricesLoading } = useQuery({
+  const { data: prices, isLoading: isPricesLoading, refetch } = useQuery({
     queryKey: ["tiingo-prices", searchSymbol, range],
     queryFn: async () => {
+      // 1D 模式切换到 IEX 实时接口
+      const endpoint = isLiveMode ? "iex" : "daily";
       const { data } = await axios.get("/api/proxy/tiingo", {
-        params: { endpoint: "daily", symbol: searchSymbol, startDate: startDate }
+        params: { 
+          endpoint, 
+          symbol: searchSymbol, 
+          startDate: startDate,
+          mock: "false" // 确保行情数据真实
+        }
       });
       return data.data;
     },
-    enabled: mode === "chart"
-  });
-
-  // 2. 获取最新实时报价 (prices 接口)
-  const { data: latestPrice } = useQuery({
-    queryKey: ["tiingo-latest", searchSymbol],
-    queryFn: async () => {
-      const { data } = await axios.get("/api/proxy/tiingo", {
-        params: { endpoint: "daily", symbol: searchSymbol } // daily 端点不带 startDate 即为最新
-      });
-      return data.data?.[0];
-    },
     enabled: mode === "chart",
-    refetchInterval: 30000 // 30秒刷新一次实时价格
+    refetchInterval: isLiveMode ? 10000 : 0 // 1D 模式每 10 秒刷新一次
   });
 
-  // 3. 获取元数据
+  // 2. 获取元数据
   const { data: meta } = useQuery({
     queryKey: ["tiingo-meta", searchSymbol],
     queryFn: async () => {
@@ -82,11 +79,23 @@ export default function FinvizContainer() {
 
   const chartData = useMemo(() => {
     if (!prices || !Array.isArray(prices)) return [];
+    
+    if (isLiveMode) {
+      // IEX 接口返回的是当前快照，我们需要构建成图表点
+      return prices.map((d: any) => ({
+        time: Math.floor(new Date(d.timestamp || Date.now()).getTime() / 1000) as any,
+        open: d.open || d.last,
+        high: d.high || d.last,
+        low: d.low || d.last,
+        close: d.last,
+      }));
+    }
+
     return prices.map((d: any) => ({
       time: d.date.split('T')[0],
       open: d.open, high: d.high, low: d.low, close: d.close,
     })).sort((a: any, b: any) => a.time.localeCompare(b.time));
-  }, [prices]);
+  }, [prices, isLiveMode]);
 
   return (
     <div className="container mx-auto py-4 px-4">
@@ -114,10 +123,9 @@ export default function FinvizContainer() {
 
         <div className="flex items-center gap-3">
           <input type="text" value={searchSymbol} onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())} className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 w-32" placeholder="Symbol" />
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
-            <Database className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Tiingo Node</span>
-          </div>
+          <button onClick={() => refetch()} className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors">
+            <RefreshCcw className={clsx("w-4 h-4", isPricesLoading && "animate-spin")} />
+          </button>
         </div>
       </div>
 
@@ -129,7 +137,9 @@ export default function FinvizContainer() {
             ) : isPricesLoading ? (
               <div className="flex flex-col items-center justify-center py-40 text-slate-300">
                 <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-500" />
-                <p className="font-bold tracking-tight uppercase text-xs italic">Syncing Market Engine...</p>
+                <p className="font-bold tracking-tight uppercase text-xs italic">
+                  {isLiveMode ? "Streaming IEX Real-time Data..." : "Syncing Historical Data..."}
+                </p>
               </div>
             ) : (
               <div className="p-4 animate-in fade-in duration-700">
@@ -139,34 +149,31 @@ export default function FinvizContainer() {
           </div>
         </div>
 
-        {/* 侧边栏：仅在技术图表模式显示 */}
         {mode === "chart" && (
           <aside className="space-y-6 animate-in slide-in-from-right duration-500">
-            {/* 1. 实时报价卡片 */}
             <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-10"><Activity className="w-20 h-20" /></div>
               <div className="relative z-10">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Live Quote</h3>
-                {latestPrice ? (
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                  {isLiveMode ? "IEX Real-time Quote" : "Daily Close Quote"}
+                </h3>
+                {prices && prices.length > 0 ? (
                   <div className="space-y-6">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black tracking-tighter">${latestPrice.close.toFixed(2)}</span>
-                      <span className={clsx("text-sm font-bold px-2 py-0.5 rounded", latestPrice.close >= latestPrice.open ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10")}>
-                        {((latestPrice.close - latestPrice.open) / latestPrice.open * 100).toFixed(2)}%
+                      <span className="text-4xl font-black tracking-tighter">
+                        ${(isLiveMode ? prices[0].last : prices[prices.length-1].close).toFixed(2)}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-y-4 gap-x-2 border-t border-white/10 pt-4">
-                      <MetaItem label="Open" value={`$${latestPrice.open.toFixed(2)}`} light />
-                      <MetaItem label="High" value={`$${latestPrice.high.toFixed(2)}`} light />
-                      <MetaItem label="Low" value={`$${latestPrice.low.toFixed(2)}`} light />
-                      <MetaItem label="Vol" value={(latestPrice.volume / 1e6).toFixed(2) + 'M'} light />
+                      <MetaItem label="High" value={`$${(isLiveMode ? prices[0].high : prices[prices.length-1].high)?.toFixed(2)}`} light />
+                      <MetaItem label="Low" value={`$${(isLiveMode ? prices[0].low : prices[prices.length-1].low)?.toFixed(2)}`} light />
+                      <MetaItem label="Vol" value={((isLiveMode ? prices[0].volume : prices[prices.length-1].volume) / 1e6).toFixed(2) + 'M'} light />
                     </div>
                   </div>
                 ) : <div className="text-xs text-slate-500 italic">Syncing price...</div>}
               </div>
             </div>
 
-            {/* 2. 公司元数据卡片 */}
             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Info className="w-3.5 h-3.5" /> Company Profile</h3>
               {meta ? (
@@ -204,19 +211,11 @@ function TradingViewHeatmap() {
   return <div className="tradingview-widget-container" ref={container} />;
 }
 
-function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: any, label: string }) {
-  return (
-    <button onClick={onClick} className={clsx("flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all", active ? "bg-white shadow-sm text-blue-600" : "text-slate-500 hover:text-slate-700")}>
-      {icon} {label}
-    </button>
-  );
-}
-
-function MetaItem({ label, value, light = false }: { label: string, value: string, light?: boolean }) {
+function MetaItem({ label, value, light = false }: { label: string, value: any, light?: boolean }) {
   return (
     <div>
       <div className={clsx("text-[9px] font-black uppercase tracking-wider", light ? "text-slate-500" : "text-slate-400")}>{label}</div>
-      <div className={clsx("text-sm font-black mt-0.5", light ? "text-white" : "text-slate-700")}>{value}</div>
+      <div className={clsx("text-sm font-black mt-0.5", light ? "text-white" : "text-slate-700")}>{value || '-'}</div>
     </div>
   );
 }
