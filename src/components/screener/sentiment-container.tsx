@@ -12,7 +12,7 @@ import {
 
 type ViewMode = "overview" | "timeline";
 type TimeRange = "3m" | "6m" | "YTD" | "1y" | "2y" | "3y" | "5y" | "10y" | "all";
-type ComparisonIndex = "none" | "spy" | "qqq" | "dia";
+type ComparisonIndex = "none" | "spy" | "qqq" | "dia" | "iwm";
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "3M", value: "3m" }, { label: "6M", value: "6m" }, { label: "YTD", value: "YTD" },
@@ -22,9 +22,10 @@ const TIME_RANGES: { label: string; value: TimeRange }[] = [
 
 const COMPARISON_INDICES: { label: string; value: ComparisonIndex }[] = [
   { label: "None", value: "none" },
-  { label: "S&P 500 (SPY)", value: "spy" },
-  { label: "Nasdaq 100 (QQQ)", value: "qqq" },
-  { label: "Dow 30 (DIA)", value: "dia" },
+  { label: "S&P 500 (SPX)", value: "spy" },
+  { label: "Nasdaq 100 (NDQ)", value: "qqq" },
+  { label: "Dow 30 (DJI)", value: "dia" },
+  { label: "Russell 2000 (RUT)", value: "iwm" },
 ];
 
 export default function SentimentContainer() {

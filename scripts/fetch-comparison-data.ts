@@ -6,7 +6,7 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 async function fetchComparisonData() {
   const token = process.env.TIINGO_API_TOKEN;
-  const tickers = ['qqq', 'dia']; // SPY 已经有了
+  const tickers = ['qqq', 'dia', 'iwm']; // SPY 已经有了
   const startDate = '2016-01-01';
 
   for (const symbol of tickers) {
