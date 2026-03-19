@@ -82,7 +82,7 @@ export default function SentimentContainer() {
   const needleRotation = (currentScore / 100) * 180 - 90;
 
   return (
-    <div className="container mx-auto py-12 px-4 max-w-6xl bg-white rounded-3xl mt-4 border border-slate-50 shadow-sm">
+    <div className="container mx-auto py-12 px-4 bg-white rounded-3xl mt-4 border border-slate-50 shadow-sm">
       <div className="flex justify-between items-center mb-12">
         <div className="flex gap-2">
           {viewMode === "timeline" && (
