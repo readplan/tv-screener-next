@@ -38,7 +38,7 @@ function MainContent() {
               <NavTab active={source === "tradingview"} onClick={() => setSource("tradingview")} label="TradingView" />
               <NavTab active={source === "finviz"} onClick={() => setSource("finviz")} label="Finviz" />
               <NavTab active={source === "sentiment"} onClick={() => setSource("sentiment")} label="恐慌贪婪指数" icon={<Activity className="w-3.5 h-3.5" />} />
-              <NavTab active={source === "tiingo"} onClick={() => setSource("tiingo")} label="Tiingo API" icon={<Database className="w-3.5 h-3.5" />} />
+              <NavTab active={source === "tiingo"} onClick={() => setSource("tiingo")} label="数据源" icon={<Database className="w-3.5 h-3.5" />} />
             </div>
           </div>
           
