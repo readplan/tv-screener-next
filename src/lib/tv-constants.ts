@@ -20,6 +20,24 @@ export const COLUMN_LABELS: Record<string, string> = {
   "Recommend.All": "推荐评分",
 };
 
+export const MARKET_CAP_OPTIONS = [
+  { label: "Any", value: null },
+  { label: "Mega ($200bln and more)", value: { left: "market_cap_basic", operation: "greater", right: 200000000000 } },
+  { label: "Large ($10bln to $200bln)", value: { left: "market_cap_basic", operation: "in_range", right: [10000000000, 200000000000] } },
+  { label: "Mid ($2bln to $10bln)", value: { left: "market_cap_basic", operation: "in_range", right: [2000000000000, 10000000000] } },
+  { label: "Small ($300mln to $2bln)", value: { left: "market_cap_basic", operation: "in_range", right: [300000000, 2000000000] } },
+  { label: "Micro ($50mln to $300mln)", value: { left: "market_cap_basic", operation: "in_range", right: [50000000, 300000000] } },
+  { label: "Nano (under $50mln)", value: { left: "market_cap_basic", operation: "less", right: 50000000 } },
+  { label: "+Large (over $10bln)", value: { left: "market_cap_basic", operation: "greater", right: 10000000000 } },
+  { label: "+Mid (over $2bln)", value: { left: "market_cap_basic", operation: "greater", right: 2000000000 } },
+  { label: "+Small (over $300mln)", value: { left: "market_cap_basic", operation: "greater", right: 300000000 } },
+  { label: "+Micro (over $50mln)", value: { left: "market_cap_basic", operation: "greater", right: 50000000 } },
+  { label: "-Large (under $200bln)", value: { left: "market_cap_basic", operation: "less", right: 200000000000 } },
+  { label: "-Mid (under $10bln)", value: { left: "market_cap_basic", operation: "less", right: 10000000000 } },
+  { label: "-Small (under $2bln)", value: { left: "market_cap_basic", operation: "less", right: 2000000000 } },
+  { label: "-Micro (under $300mln)", value: { left: "market_cap_basic", operation: "less", right: 300000000 } },
+];
+
 export const PRESETS = {
   PREMARKET_GAINERS: {
     label: "盘前涨幅榜",
