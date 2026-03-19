@@ -27,8 +27,8 @@ async function getVix() {
     
     if (vixInfo) {
       const vixData = {
-        vix: vixInfo[0],
-        change: vixInfo[1],
+        vix: Math.round(vixInfo[0] * 100) / 100,
+        change: Math.round(vixInfo[1] * 100) / 100,
         name: vixInfo[2],
         date: new Date().toISOString().split('T')[0],
         status: getVixStatus(vixInfo[0]),
