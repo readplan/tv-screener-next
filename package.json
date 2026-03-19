@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "update-vix": "tsx scripts/update-vix.ts",
+    "sync-fred": "tsx scripts/sync-fred-vix.ts",
     "convert-history": "tsx scripts/convert-csv-to-json.ts"
   },
   "dependencies": {
