@@ -144,7 +144,7 @@ export default function SentimentContainer() {
                   transition={{ type: "spring", stiffness: 35, damping: 12 }}
                   style={{ originX: "50%", originY: "99.5%" }}
                 >
-                  <svg className="w-[10px] h-[124px] -translate-y-[50%] overflow-visible" viewBox="0 0 10 124">
+                  <svg className="w-[10px] h-[124px] overflow-visible" viewBox="0 0 10 124">
                     <path d="M5,0.2c-0.6,0-1.1,0.5-1.1,1.1L0.8,106.7c0,2.3-0.1,13.6,2.6,16.3c0.6,0.6,1.3,0.7,1.8,0.7l0,0c0.5,0,1.1-0.2,1.7-0.9c0.1-0.2,0.3-0.3,0.4-0.5c2.2-3.6,1.7-13.9,1.6-16L6.1,1.3C6.1,0.7,5.6,0.2,5,0.2" fill="#1e293b"></path>
                   </svg>
                 </motion.div>
