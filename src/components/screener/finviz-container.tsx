@@ -59,7 +59,7 @@ export default function FinvizContainer() {
           mock: "false" // 确保行情数据真实
         }
       });
-      return data.data;
+      return data.data || []; // 确保不返回 undefined
     },
     enabled: mode === "chart",
     refetchInterval: isLiveMode ? 10000 : 0 // 1D 模式每 10 秒刷新一次
