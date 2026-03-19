@@ -8,6 +8,7 @@ export interface FinvizScreenerOptions {
   filters?: string;
   view?: string;
   sort?: string;
+  enabled?: boolean;
 }
 
 export function useFinviz(options: FinvizScreenerOptions = {}) {
@@ -17,6 +18,7 @@ export function useFinviz(options: FinvizScreenerOptions = {}) {
     filters = "",
     view = FINVIZ_VIEWS.OVERVIEW,
     sort = "",
+    enabled = true,
   } = options;
 
   return useQuery({
@@ -27,6 +29,7 @@ export function useFinviz(options: FinvizScreenerOptions = {}) {
       });
       return data.data;
     },
-    refetchInterval: mode === "quote" ? 60000 : 300000, // Quote 每分钟刷新，其他 5 分钟
+    enabled,
+    refetchInterval: mode === "quote" ? 60000 : 300000,
   });
 }
