@@ -12,7 +12,7 @@ import {
 
 type ViewMode = "overview" | "timeline";
 type TimeRange = "3m" | "6m" | "YTD" | "1y" | "3y" | "5y" | "all";
-type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm";
+type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix";
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "3M", value: "3m" }, { label: "6M", value: "6m" }, { label: "YTD", value: "YTD" },
@@ -25,6 +25,7 @@ const INDEX_CONFIG: Record<string, { label: string; color: string; ticker: strin
   qqq: { label: "Nasdaq 100 (NDQ)", color: "#3b82f6", ticker: "qqq" },
   dia: { label: "Dow 30 (DJI)", color: "#8b5cf6", ticker: "dia" },
   iwm: { label: "Russell 2000 (RUT)", color: "#f59e0b", ticker: "iwm" },
+  vix: { label: "VIX Volatility", color: "#ec4899", ticker: "vix" },
 };
 
 export default function SentimentContainer() {
@@ -73,6 +74,11 @@ export default function SentimentContainer() {
     queryFn: async () => (await axios.get("/data/iwm-history.json")).data,
     enabled: viewMode === "timeline" && selectedIndices.includes("iwm"),
   });
+  const qVix = useQuery({
+    queryKey: ["index-history", "vix"],
+    queryFn: async () => (await axios.get("/data/vix-history.json")).data,
+    enabled: viewMode === "timeline" && selectedIndices.includes("vix"),
+  });
 
   const mergedData = useMemo(() => {
     if (!historyData) return [];
@@ -94,7 +100,8 @@ export default function SentimentContainer() {
       spy: qSpy.data || [],
       qqq: qQqq.data || [],
       dia: qDia.data || [],
-      iwm: qIwm.data || []
+      iwm: qIwm.data || [],
+      vix: qVix.data || []
     };
 
     return base.map((d: any) => {
@@ -108,7 +115,7 @@ export default function SentimentContainer() {
       });
       return entry;
     });
-  }, [historyData, qSpy.data, qQqq.data, qDia.data, qIwm.data, timeRange, selectedIndices]);
+  }, [historyData, qSpy.data, qQqq.data, qDia.data, qIwm.data, qVix.data, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
     setSelectedIndices(prev => 
