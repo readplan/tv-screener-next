@@ -81,10 +81,12 @@ export default function SentimentContainer() {
     }
 
     // 聚合选中的指数数据
+    const indexKeys = ["spy", "qqq", "dia", "iwm"];
     return base.map((d: any) => {
       const entry: any = { ...d };
       selectedIndices.forEach(idx => {
-        const queryResult = indexQueries.find(q => q.queryKey[1] === idx);
+        const indexIdx = indexKeys.indexOf(idx);
+        const queryResult = indexQueries[indexIdx];
         if (queryResult?.data) {
           const match = queryResult.data.find((item: any) => item.date === d.date);
           if (match) entry[`price_${idx}`] = match.close;
