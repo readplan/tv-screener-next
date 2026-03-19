@@ -12,7 +12,7 @@ import {
 
 type ViewMode = "overview" | "timeline";
 type TimeRange = "3m" | "6m" | "YTD" | "1y" | "3y" | "5y" | "all";
-type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix" | "us10y" | "m2" | "unrate" | "cpi" | "spread";
+type ComparisonIndex = "spy" | "qqq" | "dia" | "iwm" | "vix" | "us10y" | "m2" | "unrate" | "cpi" | "spread" | "tga";
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "3M", value: "3m" }, { label: "6M", value: "6m" }, { label: "YTD", value: "YTD" },
@@ -31,6 +31,7 @@ const INDEX_CONFIG: Record<string, { label: string; short: string; color: string
   unrate: { label: "Unemployment Rate", short: "UNR", color: "#f43f5e", path: "/data/macro/unemployment-history.json" },
   cpi: { label: "CPI Inflation", short: "CPI", color: "#fb923c", path: "/data/macro/cpi-history.json" },
   spread: { label: "HY Yield Spread", short: "HY", color: "#a855f7", path: "/data/macro/yield_spread-history.json" },
+  tga: { label: "TGA Balance", short: "TGA", color: "#6366f1", path: "/data/macro/tga-history.json" },
 };
 
 const INDEX_KEYS = Object.keys(INDEX_CONFIG);
@@ -52,7 +53,6 @@ export default function SentimentContainer() {
     enabled: viewMode === "timeline",
   });
 
-  // 使用官方 useQueries 并行、按序加载对比数据 (修复 Hooks 违规)
   const results = useQueries({
     queries: INDEX_KEYS.map(key => ({
       queryKey: ["index-history", key],
@@ -84,7 +84,8 @@ export default function SentimentContainer() {
         const data = results[queryIndex]?.data;
         if (data) {
           let match = data.find((item: any) => item.date === d.date);
-          if (!match && (idx === "m2" || idx === "unrate" || idx === "cpi")) {
+          // 模糊匹配逻辑 (针对月线 M2/UNR/CPI 或 周线 TGA)
+          if (!match && (idx === "m2" || idx === "unrate" || idx === "cpi" || idx === "tga")) {
             match = data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
           }
           if (match) entry[`price_${idx}`] = match.value || match.close;
@@ -121,7 +122,7 @@ export default function SentimentContainer() {
                   <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
                 ))}
               </div>
-              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100 flex-wrap max-w-[650px]">
+              <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100 flex-wrap max-w-[700px]">
                 {Object.entries(INDEX_CONFIG).map(([key, config]) => (
                   <button key={key} onClick={() => toggleIndex(key as any)} 
                     className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", selectedIndices.includes(key as any) ? "bg-white shadow-sm shadow-slate-200 border border-slate-100" : "text-slate-400 border border-transparent")}
@@ -146,7 +147,7 @@ export default function SentimentContainer() {
           <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-8 flex flex-col items-center">
               <div className="relative w-full max-w-[480px] aspect-[338/173] overflow-hidden">
-                <div className="absolute inset-0">
+                <div className="absolute inset-0 text-slate-100">
                   <svg viewBox="0 0 338 173" className="w-full h-full overflow-visible">
                     <path d="M201.9,4.3C191.2,2.1,180.1,1,168.8,1c-11.3,0-22.4,1.1-33.1,3.2l16.1,61.6c5.5-0.9,11.2-1.4,17-1.4c5.8,0,11.5,0.5,17,1.4L201.9,4.3z" className={clsx("transition-all duration-700", currentScore > 45 && currentScore <= 55 ? "fill-amber-100 stroke-amber-400" : "fill-slate-50 stroke-slate-100")} strokeWidth="1"></path>
                     <path d="M204.9,4.9l-16.1,61.5c21.1,4.1,40,14.4,54.6,29.1L289,51.3C266.4,28.4,237.4,12,204.9,4.9L204.9,4.9z" className={clsx("transition-all duration-700", currentScore > 55 && currentScore <= 75 ? "fill-green-100 stroke-green-400" : "fill-slate-50 stroke-slate-100")} strokeWidth="1"></path>

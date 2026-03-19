@@ -9,7 +9,8 @@ const MACRO_SERIES = [
   { id: 'M2SL', name: 'm2' },            // M2 Money Supply
   { id: 'UNRATE', name: 'unemployment' }, // Unemployment Rate
   { id: 'CPIAUCSL', name: 'cpi' },       // Consumer Price Index
-  { id: 'BAMLH0A0HYM2', name: 'yield_spread' } // ICE BofA High Yield Index Option-Adjusted Spread
+  { id: 'BAMLH0A0HYM2', name: 'yield_spread' }, // ICE BofA High Yield Index Option-Adjusted Spread
+  { id: 'WTREGEN', name: 'tga' }         // Treasury General Account: Deposits
 ];
 
 async function syncMacroData() {
