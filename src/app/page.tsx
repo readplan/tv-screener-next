@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ScreenerContainer from "@/components/screener/screener-container";
 import FinvizContainer from "@/components/screener/finviz-container";
 import SentimentContainer from "@/components/screener/sentiment-container";
@@ -10,8 +11,16 @@ import { clsx } from "clsx";
 
 type DataSource = "tradingview" | "finviz" | "sentiment" | "tiingo";
 
-export default function Home() {
-  const [source, setSource] = useState<DataSource>("tradingview");
+function MainContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const source = (searchParams.get("tab") as DataSource) || "tradingview";
+
+  const setSource = (tab: DataSource) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.push(`?${params.toString()}`);
+  };
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -52,6 +61,18 @@ export default function Home() {
         {source === "tiingo" && <TiingoContainer />}
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen w-screen flex items-center justify-center bg-slate-50 text-slate-400 font-bold uppercase tracking-widest text-xs animate-pulse">
+        Initializing Terminal...
+      </div>
+    }>
+      <MainContent />
+    </Suspense>
   );
 }
 
