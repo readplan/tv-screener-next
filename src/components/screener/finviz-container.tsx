@@ -1,22 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { Loader2, RefreshCcw, TrendingUp, Users, Database, ShieldCheck, Newspaper, BarChart2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Loader2, RefreshCcw, Database, ShieldCheck, Newspaper, BarChart2 } from "lucide-react";
 import { clsx } from "clsx";
 
 type FinvizMode = "screener" | "insider";
 
 export default function FinvizContainer() {
+  const searchParams = useSearchParams();
+  const urlSymbol = searchParams.get("symbol");
+  
   const [mode, setMode] = useState<FinvizMode>("screener");
-  const [searchSymbol, setSearchSymbol] = useState("AAPL");
+  const [searchSymbol, setSearchSymbol] = useState(urlSymbol || "AAPL");
+
+  // 当 URL 中的 symbol 变化时，同步更新本地搜索状态
+  useEffect(() => {
+    if (urlSymbol) {
+      setSearchSymbol(urlSymbol);
+    }
+  }, [urlSymbol]);
 
   // 统一采用 Tiingo API 数据源
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["finviz-tiingo-data", mode, searchSymbol],
     queryFn: async () => {
-      // 映射：筛选器对应 Tiingo EOD，内幕交易对应 Tiingo News (因为 Tiingo 无原生 Insider 免费接口)
       const endpoint = mode === "screener" ? "daily" : "news";
       const { data } = await axios.get("/api/proxy/tiingo", {
         params: { endpoint, symbol: searchSymbol }

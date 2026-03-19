@@ -5,8 +5,10 @@ import { useTVScreener } from "@/hooks/use-tv-screener";
 import { PRESETS, COLUMN_LABELS, DEFAULT_COLUMNS, MARKET_CAP_OPTIONS } from "@/lib/tv-constants";
 import { Loader2, RefreshCcw, ChevronDown } from "lucide-react";
 import { clsx } from "clsx";
+import { useRouter } from "next/navigation";
 
 export default function ScreenerContainer() {
+  const router = useRouter();
   const [selectedPreset, setSelectedPreset] = useState<keyof typeof PRESETS>("MOST_ACTIVE");
   const [marketCapFilter, setMarketCapFilter] = useState<any>(null);
   
@@ -20,16 +22,67 @@ export default function ScreenerContainer() {
     sort: PRESETS[selectedPreset].sort,
   });
 
+  const handleTickerClick = (ticker: string) => {
+    // 处理 Ticker 格式，某些可能带市场前缀，我们提取主体
+    const cleanTicker = ticker.split(':').pop() || ticker;
+    router.push(`?tab=finviz&symbol=${cleanTicker}`);
+  };
+
+  const renderCell = (col: string, value: any, ticker: string) => {
+    if (value === null || value === undefined) return "-";
+
+    if (col === "change") {
+      const isPositive = value > 0;
+      return (
+        <span className={clsx("font-bold px-2 py-1 rounded text-xs", isPositive ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50")}>
+          {isPositive ? "+" : ""}{value.toFixed(2)}%
+        </span>
+      );
+    }
+
+    if (col === "close") {
+      return <span className="font-mono font-bold text-slate-900">${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>;
+    }
+
+    if (col === "volume" || col === "market_cap_basic") {
+      return <span className="text-slate-500 font-semibold">{formatNumber(value)}</span>;
+    }
+
+    if (col === "Recommend.All") {
+      const label = getRecommendationLabel(value);
+      return (
+        <span className={clsx(
+          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight",
+          value > 0.5 ? "bg-green-600 text-white" : value < -0.5 ? "bg-red-600 text-white" : "bg-slate-100 text-slate-600"
+        )}>
+          {label}
+        </span>
+      );
+    }
+
+    if (col === "name") {
+      return (
+        <button 
+          onClick={() => handleTickerClick(ticker)}
+          className="font-black text-blue-600 hover:underline underline-offset-4 cursor-pointer text-left"
+        >
+          {value}
+        </button>
+      );
+    }
+
+    return value;
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <header className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">TradingView 筛选器</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">TradingView 筛选器</h1>
           <p className="text-muted-foreground mt-2">实时市场数据仪表盘</p>
         </div>
         
         <div className="flex items-center gap-3">
-          {/* 市值筛选器 */}
           <div className="relative group">
             <select 
               className="appearance-none bg-white border border-slate-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer shadow-sm"
@@ -96,7 +149,7 @@ export default function ScreenerContainer() {
                   <tr key={row.ticker} className="hover:bg-blue-50/30 transition-colors group">
                     {DEFAULT_COLUMNS.map((col) => (
                       <td key={col} className="px-6 py-4 text-sm font-medium text-slate-700">
-                        {renderCell(col, row[col])}
+                        {renderCell(col, row[col], row.ticker)}
                       </td>
                     ))}
                   </tr>
@@ -108,45 +161,6 @@ export default function ScreenerContainer() {
       </main>
     </div>
   );
-}
-
-function renderCell(col: string, value: any) {
-  if (value === null || value === undefined) return "-";
-
-  if (col === "change") {
-    const isPositive = value > 0;
-    return (
-      <span className={clsx("font-bold px-2 py-1 rounded text-xs", isPositive ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50")}>
-        {isPositive ? "+" : ""}{value.toFixed(2)}%
-      </span>
-    );
-  }
-
-  if (col === "close") {
-    return <span className="font-mono font-bold text-slate-900">${value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>;
-  }
-
-  if (col === "volume" || col === "market_cap_basic") {
-    return <span className="text-slate-500 font-semibold">{formatNumber(value)}</span>;
-  }
-
-  if (col === "Recommend.All") {
-    const label = getRecommendationLabel(value);
-    return (
-      <span className={clsx(
-        "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight",
-        value > 0.5 ? "bg-green-600 text-white" : value < -0.5 ? "bg-red-600 text-white" : "bg-slate-100 text-slate-600"
-      )}>
-        {label}
-      </span>
-    );
-  }
-
-  if (col === "name") {
-    return <span className="font-black text-blue-600 group-hover:underline underline-offset-4 cursor-pointer">{value}</span>;
-  }
-
-  return value;
 }
 
 function formatNumber(num: number) {
