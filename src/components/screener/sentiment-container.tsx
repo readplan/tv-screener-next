@@ -112,7 +112,7 @@ export default function SentimentContainer() {
         {viewMode === "overview" ? (
           <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-8 flex flex-col items-center">
-              <div className="relative w-full max-w-[480px] aspect-[338/173]">
+              <div className="relative w-full max-w-[480px] aspect-[338/173] overflow-hidden">
                 <div className="absolute inset-0">
                   <svg viewBox="0 0 338 173" className="w-full h-full overflow-visible">
                     <path id="neutral" className={clsx("transition-all duration-700", currentScore > 45 && currentScore <= 55 ? "fill-amber-100 stroke-amber-400" : "fill-[#f4f4f4] stroke-[#e5e5e5]")} d="M201.9,4.3C191.2,2.1,180.1,1,168.8,1c-11.3,0-22.4,1.1-33.1,3.2l16.1,61.6c5.5-0.9,11.2-1.4,17-1.4c5.8,0,11.5,0.5,17,1.4L201.9,4.3z" strokeWidth="1"></path>
@@ -148,7 +148,7 @@ export default function SentimentContainer() {
                     <path d="M5,0.2c-0.6,0-1.1,0.5-1.1,1.1L0.8,106.7c0,2.3-0.1,13.6,2.6,16.3c0.6,0.6,1.3,0.7,1.8,0.7l0,0c0.5,0,1.1-0.2,1.7-0.9c0.1-0.2,0.3-0.3,0.4-0.5c2.2-3.6,1.7-13.9,1.6-16L6.1,1.3C6.1,0.7,5.6,0.2,5,0.2" fill="#1e293b"></path>
                   </svg>
                 </motion.div>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[10%] w-24 h-24 bg-white rounded-full shadow-[0_15px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-50 flex items-center justify-center z-20">
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[20%] w-24 h-24 bg-white rounded-full shadow-[0_15px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-50 flex items-center justify-center z-20">
                   <span className="text-[36px] font-black text-slate-900 leading-none">{Math.round(currentScore)}</span>
                 </div>
               </div>
