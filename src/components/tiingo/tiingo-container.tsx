@@ -86,11 +86,20 @@ export default function TiingoContainer() {
       setWsStatus("connected");
       setWsMessages(prev => [...prev, { type: "system", msg: "Connection Established. Sending Subscription..." }]);
       
-      const subscribe = {
+      const isIEX = activeEndpoint === "ws_iex";
+      const subscribe: any = {
         'eventName': 'subscribe',
         'authorization': 'e59abb611d5498c2d2859c505590c95dc648024f',
-        'eventData': { 'thresholdLevel': 5 } // 默认 level 5 以减少低频噪点
+        'eventData': { 
+          'thresholdLevel': isIEX ? 6 : 5 
+        }
       };
+
+      // 只有 IEX 模式下需要明确指定 tickers
+      if (isIEX) {
+        subscribe.eventData.tickers = [searchSymbol.toLowerCase(), 'uso', 'spy'];
+      }
+
       ws.send(JSON.stringify(subscribe));
     };
 
