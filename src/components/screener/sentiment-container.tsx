@@ -125,7 +125,7 @@ export default function SentimentContainer() {
                 </motion.div>
 
                 {/* 3. 中心数值圆环底座 */}
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[25%] w-24 h-24 bg-white rounded-full shadow-[0_15px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-50 flex items-center justify-center z-20">
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[-10%] w-24 h-24 bg-white rounded-full shadow-[0_15px_40px_-10px_rgba(0,0,0,0.1)] border border-slate-50 flex items-center justify-center z-20">
                   <span className="text-[36px] font-black text-slate-900 leading-none">{Math.round(currentScore)}</span>
                 </div>
               </div>
