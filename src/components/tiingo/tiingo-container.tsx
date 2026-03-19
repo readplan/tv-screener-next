@@ -1,164 +1,105 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { 
   BarChart2, Newspaper, Coins, Landmark, Zap, Search,
-  ChevronRight, ArrowUpRight, Activity, Loader2, AlertCircle, Link2, Wifi, Power, PowerOff, Terminal, ShieldAlert
+  ChevronRight, ArrowUpRight, Activity, Loader2, AlertCircle, Link2, Wifi, Globe, Database
 } from "lucide-react";
 import { clsx } from "clsx";
 
-type TiingoEndpoint = 
-  | "daily" | "daily_meta" | "news" | "crypto" | "forex" | "iex" 
-  | "fundamentals" | "dividends" | "splits" | "search"
-  | "ws_crypto" | "ws_forex" | "ws_iex";
+type ApiProvider = "tiingo" | "fred";
 
 interface APIConfig {
   label: string;
-  endpoint: TiingoEndpoint;
+  endpoint: string;
   url: string;
   icon: any;
   category: "REST" | "WebSocket" | "Utility";
 }
 
-const API_STRUCTURE: APIConfig[] = [
+const TIINGO_STRUCTURE: APIConfig[] = [
   { category: "REST", label: "2.1 End-of-Day", endpoint: "daily", icon: BarChart2, url: "https://api.tiingo.com/tiingo/daily/<ticker>/prices" },
   { category: "REST", label: "2.1 Meta Data", endpoint: "daily_meta", icon: Search, url: "https://api.tiingo.com/tiingo/daily/<ticker>" },
   { category: "REST", label: "2.2 News", endpoint: "news", icon: Newspaper, url: "https://api.tiingo.com/tiingo/news" },
-  { category: "REST", label: "2.3 Crypto", endpoint: "crypto", icon: Coins, url: "https://api.tiingo.com/tiingo/crypto/prices" },
-  { category: "REST", label: "2.4 Forex", endpoint: "forex", icon: Zap, url: "https://api.tiingo.com/tiingo/fx/<ticker>/top" },
-  { category: "REST", label: "2.5 IEX", endpoint: "iex", icon: Landmark, url: "https://api.tiingo.com/iex/<ticker>" },
-  { category: "REST", label: "2.6 Fundamentals", endpoint: "fundamentals", icon: Activity, url: "https://api.tiingo.com/tiingo/fundamentals/<ticker>/daily" },
-  { category: "REST", label: "2.8 Dividends", endpoint: "dividends", icon: ArrowUpRight, url: "https://api.tiingo.com/tiingo/corporate-actions/<ticker>/distributions" },
-  { category: "REST", label: "2.9 Splits", endpoint: "splits", icon: ArrowUpRight, url: "https://api.tiingo.com/tiingo/corporate-actions/<ticker>/splits" },
   { category: "WebSocket", label: "3.1 WS Crypto", endpoint: "ws_crypto", icon: Wifi, url: "wss://api.tiingo.com/crypto" },
-  { category: "WebSocket", label: "3.2 WS Forex", endpoint: "ws_forex", icon: Wifi, url: "wss://api.tiingo.com/fx" },
   { category: "WebSocket", label: "3.3 WS IEX", endpoint: "ws_iex", icon: Wifi, url: "wss://api.tiingo.com/iex" },
   { category: "Utility", label: "4.1 Search", endpoint: "search", icon: Search, url: "https://api.tiingo.com/tiingo/utilities/search?query=<query>" },
 ];
 
-export default function TiingoContainer() {
-  const [activeEndpoint, setActiveEndpoint] = useState<TiingoEndpoint>("daily");
-  const [searchSymbol, setSearchSymbol] = useState("AAPL");
-  
-  // WebSocket 状态
-  const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "mocking">("disconnected");
-  const [wsMessages, setWsMessages] = useState<any[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
-  const mockIntervalRef = useRef<any>(null);
-  const logContainerRef = useRef<HTMLDivElement>(null);
+const FRED_STRUCTURE: APIConfig[] = [
+  { category: "REST", label: "Series Info", endpoint: "series", icon: Activity, url: "https://api.stlouisfed.org/fred/series?series_id=<id>" },
+  { category: "REST", label: "Observations", endpoint: "observations", icon: BarChart2, url: "https://api.stlouisfed.org/fred/series/observations?series_id=<id>" },
+  { category: "REST", label: "Releases", endpoint: "releases", icon: Globe, url: "https://api.stlouisfed.org/fred/releases" },
+  { category: "REST", label: "Release Obs", endpoint: "release_observations", icon: Landmark, url: "https://api.stlouisfed.org/fred/release/observations?release_id=<id>" },
+];
 
-  // REST Query
+export default function TiingoContainer() {
+  const [provider, setProvider] = useState<ApiProvider>("tiingo");
+  const [activeEndpoint, setActiveEndpoint] = useState<string>("daily");
+  const [searchSymbol, setSearchSymbol] = useState("AAPL");
+
+  const currentStructure = provider === "tiingo" ? TIINGO_STRUCTURE : FRED_STRUCTURE;
+
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["tiingo-api-data", activeEndpoint, searchSymbol],
+    queryKey: ["terminal-api-data", provider, activeEndpoint, searchSymbol],
     queryFn: async () => {
-      if (activeEndpoint.startsWith("ws_")) return null;
-      const { data } = await axios.get("/api/proxy/tiingo", {
-        params: { endpoint: activeEndpoint, symbol: searchSymbol, mock: "true" }
-      });
+      const proxyPath = provider === "tiingo" ? "/api/proxy/tiingo" : "/api/proxy/fred";
+      const params: any = { endpoint: activeEndpoint, mock: "true" };
+      
+      if (provider === "tiingo") params.symbol = searchSymbol;
+      else {
+        params.series_id = searchSymbol === "AAPL" ? "VIXCLS" : searchSymbol;
+        params.release_id = "10";
+      }
+
+      const { data } = await axios.get(proxyPath, { params });
+      if (data.error) throw new Error(data.details || data.error);
       return data.data;
     },
-    enabled: !activeEndpoint.startsWith("ws_"),
+    retry: false,
   });
 
-  useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [wsMessages]);
-
-  const startMockStreaming = () => {
-    if (mockIntervalRef.current) clearInterval(mockIntervalRef.current);
-    setWsStatus("mocking");
-    setWsMessages([{ type: "system", msg: "Simulating high-fidelity stream (Local Mock Mode)..." }]);
-    
-    let lastPrice = searchSymbol === "BTCUSD" ? 68000 : 150;
-    
-    mockIntervalRef.current = setInterval(() => {
-      const change = (Math.random() - 0.5) * 2;
-      lastPrice += change;
-      const mockMsg = {
-        service: activeEndpoint.replace('ws_', ''),
-        symbol: searchSymbol,
-        price: parseFloat(lastPrice.toFixed(2)),
-        size: Math.floor(Math.random() * 100),
-        timestamp: new Date().toISOString()
-      };
-      setWsMessages(prev => [...prev.slice(-49), { type: "data", msg: mockMsg }]);
-    }, 1000);
-  };
-
-  const handleConnect = () => {
-    if (wsRef.current) wsRef.current.close();
-    if (mockIntervalRef.current) clearInterval(mockIntervalRef.current);
-    
-    const config = API_STRUCTURE.find(a => a.endpoint === activeEndpoint);
-    if (!config) return;
-
-    setWsStatus("connecting");
-    setWsMessages([{ type: "system", msg: `Connecting to ${config.url}...` }]);
-
-    try {
-      const ws = new WebSocket(config.url);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setWsStatus("connected");
-        const sub = {
-          'eventName': 'subscribe',
-          'authorization': 'e59abb611d5498c2d2859c505590c95dc648024f',
-          'eventData': { 'thresholdLevel': 6, 'tickers': [searchSymbol.toLowerCase()] }
-        };
-        ws.send(JSON.stringify(sub));
-      };
-
-      ws.onmessage = (e) => {
-        setWsMessages(prev => [...prev.slice(-49), { type: "data", msg: JSON.parse(e.data) }]);
-      };
-
-      ws.onerror = () => {
-        setWsMessages(prev => [...prev, { type: "error", msg: "Connection Refused (403 Forbidden). Handshake failed." }]);
-        setWsStatus("disconnected");
-      };
-
-      ws.onclose = () => {
-        setWsStatus("disconnected");
-      };
-    } catch (e) {
-      setWsStatus("disconnected");
-    }
-  };
-
-  const handleDisconnect = () => {
-    wsRef.current?.close();
-    if (mockIntervalRef.current) clearInterval(mockIntervalRef.current);
-    setWsStatus("disconnected");
+  const handleProviderChange = (p: ApiProvider) => {
+    setProvider(p);
+    setActiveEndpoint(p === "tiingo" ? "daily" : "series");
+    setSearchSymbol(p === "tiingo" ? "AAPL" : "VIXCLS");
   };
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-[#f8f9fc]">
       {/* Sidebar */}
-      <aside className="w-80 bg-white border-r border-slate-200 overflow-y-auto flex flex-col">
-        <div className="p-6 border-b border-slate-50">
-          <div className="flex items-center gap-2 text-blue-600 font-black text-xl italic tracking-tighter">
-            TIINGO <span className="text-slate-400 not-italic">API</span>
+      <aside className="w-80 bg-white border-r border-slate-200 overflow-y-auto flex flex-col shadow-sm">
+        <div className="p-6 border-b border-slate-50 space-y-4">
+          <div className="flex items-center gap-2 text-blue-600 font-black text-xl italic tracking-tighter uppercase">
+            {provider} <span className="text-slate-400 not-italic">API</span>
+          </div>
+          
+          {/* Provider Switcher */}
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button onClick={() => handleProviderChange("tiingo")} className={clsx("flex-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", provider === "tiingo" ? "bg-white shadow-sm text-blue-600" : "text-slate-400")}>Tiingo</button>
+            <button onClick={() => handleProviderChange("fred")} className={clsx("flex-1 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all", provider === "fred" ? "bg-white shadow-sm text-red-600" : "text-slate-400")}>FRED V2</button>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-6">
-          {["REST", "WebSocket", "Utility"].map((cat) => (
-            <div key={cat} className="space-y-2">
-              <div className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{cat} Endpoints</div>
-              {API_STRUCTURE.filter(a => a.category === cat).map((item) => (
-                <button key={item.endpoint} onClick={() => { setActiveEndpoint(item.endpoint); setWsMessages([]); }}
-                  className={clsx("w-full text-left p-3 rounded-xl transition-all", activeEndpoint === item.endpoint ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "hover:bg-slate-50 text-slate-600")}>
-                  <div className="flex items-center gap-3 mb-1"><item.icon className="w-4 h-4" /> <span className="text-sm font-black tracking-tight">{item.label}</span></div>
-                  <div className="text-[9px] font-mono break-all opacity-60">{item.url.replace('<ticker>', searchSymbol)}</div>
-                </button>
-              ))}
-            </div>
-          ))}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+          {["REST", "WebSocket", "Utility"].map((cat) => {
+            const items = currentStructure.filter(a => a.category === cat);
+            if (items.length === 0) return null;
+            return (
+              <div key={cat} className="space-y-2">
+                <div className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{cat} Endpoints</div>
+                {items.map((item) => (
+                  <button key={item.endpoint} onClick={() => setActiveEndpoint(item.endpoint)}
+                    className={clsx("w-full text-left p-3 rounded-xl transition-all", activeEndpoint === item.endpoint ? "bg-blue-600 text-white shadow-lg shadow-blue-100" : "hover:bg-slate-50 text-slate-600")}>
+                    <div className="flex items-center gap-3 mb-1"><item.icon className={clsx("w-4 h-4", activeEndpoint === item.endpoint ? "text-white" : "text-blue-500")} /> <span className="text-sm font-black tracking-tight">{item.label}</span></div>
+                    <div className={clsx("text-[9px] font-mono break-all opacity-60", activeEndpoint === item.endpoint ? "text-blue-50" : "text-slate-400")}>{item.url.replace('<ticker>', searchSymbol).replace('<id>', searchSymbol)}</div>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
@@ -166,54 +107,31 @@ export default function TiingoContainer() {
       <main className="flex-1 overflow-y-auto p-8">
         <header className="flex justify-between items-end mb-8 border-b pb-8">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic">{activeEndpoint.replace('ws_', '')}</h2>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-blue-100 text-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase">{provider} Protocol</span>
+              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest italic ml-2">Sandbox Mode Enabled</span>
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter italic leading-none">{activeEndpoint.replace('_', ' ')} Terminal</h2>
           </div>
           <div className="flex gap-2">
-            {!activeEndpoint.startsWith("ws_") ? (
-              <button onClick={() => refetch()} className="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-black uppercase tracking-wider">Execute REST</button>
-            ) : (
-              <div className="flex gap-2">
-                {wsStatus === "disconnected" ? (
-                  <>
-                    <button onClick={handleConnect} className="bg-purple-600 text-white px-6 py-3 rounded-xl text-sm font-black uppercase flex items-center gap-2 shadow-lg shadow-purple-100"><Power className="w-4 h-4" /> Live Connect</button>
-                    <button onClick={startMockStreaming} className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl text-sm font-black uppercase flex items-center gap-2 hover:bg-slate-200 transition-all"><Zap className="w-4 h-4" /> Run Mock Stream</button>
-                  </>
-                ) : (
-                  <button onClick={handleDisconnect} className="bg-red-500 text-white px-8 py-3 rounded-xl text-sm font-black uppercase flex items-center gap-2"><PowerOff className="w-4 h-4" /> Terminate</button>
-                )}
-              </div>
-            )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input type="text" value={searchSymbol} onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())} className="bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-50 w-48 shadow-sm" placeholder="Ticker / Series ID" />
+            </div>
+            <button onClick={() => refetch()} className="bg-slate-900 text-white px-8 py-3 rounded-xl text-sm font-black uppercase tracking-wider hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 italic">Execute Query</button>
           </div>
         </header>
 
-        <section className="h-full">
-          {activeEndpoint.startsWith("ws_") ? (
-            <div className="flex flex-col h-[650px]">
-              {wsStatus === "disconnected" && wsMessages.some(m => m.type === "error") && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-4 text-red-600 animate-in fade-in zoom-in-95">
-                  <ShieldAlert className="w-6 h-6 flex-shrink-0" />
-                  <div className="text-xs font-bold leading-relaxed">
-                    Account Restriction Detected: Tiingo returned 403. Free accounts may have limited WebSocket access or exceeded quotas.
-                    <br />Try "Run Mock Stream" to test UI logic without API limits.
-                  </div>
-                </div>
-              )}
-              <div ref={logContainerRef} className="bg-[#0f172a] rounded-3xl p-8 flex-1 overflow-y-auto border border-slate-800 shadow-2xl font-mono text-[11px] leading-relaxed relative">
-                <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full text-[9px] font-black uppercase text-slate-400">
-                  <div className={clsx("w-1.5 h-1.5 rounded-full", wsStatus === "mocking" ? "bg-blue-500 animate-pulse" : wsStatus === "connected" ? "bg-green-500" : "bg-red-500")} />
-                  {wsStatus}
-                </div>
-                {wsMessages.map((m, i) => (
-                  <div key={i} className={clsx("mb-2", m.type === "system" ? "text-blue-400" : m.type === "error" ? "text-red-400" : "text-emerald-400")}>
-                    <span className="opacity-30 mr-2">[{new Date().toLocaleTimeString()}]</span>
-                    {typeof m.msg === 'object' ? JSON.stringify(m.msg, null, 2) : m.msg}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <pre className="text-xs bg-slate-900 text-emerald-400 p-8 rounded-3xl overflow-auto border border-slate-800 shadow-2xl">{JSON.stringify(data, null, 2)}</pre>
-          )}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="flex items-center gap-2 mb-4">
+            <Link2 className="w-4 h-4 text-blue-500" />
+            <span className="text-[10px] font-mono text-slate-400 font-bold tracking-tight bg-slate-50 px-2 py-1 rounded border border-slate-100 italic break-all">
+              GET {currentStructure.find(a => a.endpoint === activeEndpoint)?.url.replace('<ticker>', searchSymbol).replace('<id>', searchSymbol).replace('<query>', searchSymbol)}
+            </span>
+          </div>
+          <pre className="text-xs bg-slate-900 text-emerald-400 p-8 rounded-2xl overflow-auto max-h-[700px] border border-slate-800 shadow-2xl leading-relaxed">
+            {JSON.stringify(data, null, 2)}
+          </pre>
         </section>
       </main>
     </div>
