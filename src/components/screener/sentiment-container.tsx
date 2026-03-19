@@ -184,7 +184,21 @@ export default function SentimentContainer() {
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '12px' }} />
                 <ReferenceLine yAxisId="right" y={75} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Greed', fill: '#94a3b8', fontSize: 9 }} />
                 <ReferenceLine yAxisId="right" y={25} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Fear', fill: '#94a3b8', fontSize: 9 }} />
-                <Line yAxisId="right" type="monotone" dataKey="value" stroke="#1e293b" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="Fear & Greed" />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#1e293b" 
+                  strokeWidth={3} 
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    if (payload.value <= 20) return <circle cx={cx} cy={cy} r={3} fill="#ef4444" stroke="none" key={`dot-${payload.date}`} />;
+                    if (payload.value >= 70) return <circle cx={cx} cy={cy} r={3} fill="#22c55e" stroke="none" key={`dot-${payload.date}`} />;
+                    return <circle cx={cx} cy={cy} r={0} key={`dot-${payload.date}`} />; // 普通点隐藏
+                  }}
+                  activeDot={{ r: 6 }} 
+                  name="Fear & Greed" 
+                />
                 {compareWith !== "none" && (
                   <Line yAxisId="left" type="monotone" dataKey="indexPrice" stroke="#3b82f6" strokeWidth={2} dot={false} name={compareWith.toUpperCase()} strokeDasharray="5 5" />
                 )}
