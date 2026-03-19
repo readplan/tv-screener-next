@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -33,6 +33,8 @@ const INDEX_CONFIG: Record<string, { label: string; short: string; color: string
   spread: { label: "HY Yield Spread", short: "HY", color: "#a855f7", path: "/data/macro/yield_spread-history.json" },
 };
 
+const INDEX_KEYS = Object.keys(INDEX_CONFIG);
+
 export default function SentimentContainer() {
   const [viewMode, setViewMode] = useState<ViewMode>("overview");
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
@@ -50,19 +52,14 @@ export default function SentimentContainer() {
     enabled: viewMode === "timeline",
   });
 
-  // 动态数据查询 Map
-  const queryResults = useMemo(() => {
-    const results: any = {};
-    Object.keys(INDEX_CONFIG).forEach(key => {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      results[key] = useQuery({
-        queryKey: ["index-history", key],
-        queryFn: async () => (await axios.get(INDEX_CONFIG[key].path)).data,
-        enabled: viewMode === "timeline" && selectedIndices.includes(key as any),
-      });
-    });
-    return results;
-  }, [viewMode, selectedIndices]);
+  // 使用官方 useQueries 并行、按序加载对比数据 (修复 Hooks 违规)
+  const results = useQueries({
+    queries: INDEX_KEYS.map(key => ({
+      queryKey: ["index-history", key],
+      queryFn: async () => (await axios.get(INDEX_CONFIG[key].path)).data,
+      enabled: viewMode === "timeline" && selectedIndices.includes(key as any),
+    }))
+  });
 
   const mergedData = useMemo(() => {
     if (!historyData) return [];
@@ -83,19 +80,19 @@ export default function SentimentContainer() {
     return base.map((d: any) => {
       const entry: any = { ...d };
       selectedIndices.forEach(idx => {
-        const query = queryResults[idx];
-        if (query?.data) {
-          // 对齐逻辑：尝试精准匹配，若无（如月度数据），则匹配月份前缀
-          let match = query.data.find((item: any) => item.date === d.date);
+        const queryIndex = INDEX_KEYS.indexOf(idx);
+        const data = results[queryIndex]?.data;
+        if (data) {
+          let match = data.find((item: any) => item.date === d.date);
           if (!match && (idx === "m2" || idx === "unrate" || idx === "cpi")) {
-            match = query.data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
+            match = data.find((item: any) => item.date.startsWith(d.date.substring(0, 7)));
           }
           if (match) entry[`price_${idx}`] = match.value || match.close;
         }
       });
       return entry;
     });
-  }, [historyData, queryResults, timeRange, selectedIndices]);
+  }, [historyData, results, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
     setSelectedIndices(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
@@ -105,7 +102,7 @@ export default function SentimentContainer() {
     return (
       <div className="flex flex-col items-center justify-center py-40 text-slate-300">
         <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-500" />
-        <span className="font-black uppercase text-[10px] tracking-widest">Integrating Macro Assets</span>
+        <span className="font-black uppercase text-[10px] tracking-widest">Macro Syncing...</span>
       </div>
     );
   }
