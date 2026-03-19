@@ -22,10 +22,10 @@ export default function Home() {
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shadow-lg shadow-blue-100">
                 <BarChart3 className="text-white w-5 h-5" />
               </div>
-              <span className="font-black text-xl tracking-tighter text-slate-800 italic">MS</span>
+              <span className="font-black text-xl tracking-tighter text-slate-900 italic">Terminal X</span>
             </div>
             
-            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl">
+            <div className="hidden lg:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/50">
               <NavTab active={source === "tradingview"} onClick={() => setSource("tradingview")} label="TradingView" />
               <NavTab active={source === "finviz"} onClick={() => setSource("finviz")} label="Finviz" />
               <NavTab active={source === "sentiment"} onClick={() => setSource("sentiment")} label="Sentiment" icon={<Activity className="w-3.5 h-3.5" />} />
