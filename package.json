@@ -9,11 +9,13 @@
     "lint": "next lint",
     "update-vix": "tsx scripts/update-vix.ts",
     "sync-fred": "tsx scripts/sync-fred-vix.ts",
+    "backup": "tsx scripts/backup-to-blob.ts",
     "convert-history": "tsx scripts/convert-csv-to-json.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.91.2",
     "@tanstack/react-table": "^8.21.3",
+    "@vercel/blob": "^2.3.1",
     "axios": "^1.13.6",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
