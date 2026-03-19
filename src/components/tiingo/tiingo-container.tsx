@@ -12,7 +12,7 @@ import { clsx } from "clsx";
 type TiingoEndpoint = "daily" | "news" | "crypto" | "forex" | "iex" | "fundamentals" | "dividends" | "splits";
 
 export default function TiingoContainer() {
-  const [activeEndpoint, setActiveEndpoint] = useState<TiingoEndpoint>("news");
+  const [activeEndpoint, setActiveEndpoint] = useState<TiingoEndpoint>("daily");
   const [searchSymbol, setSearchSymbol] = useState("AAPL");
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -21,8 +21,11 @@ export default function TiingoContainer() {
       const { data } = await axios.get("/api/proxy/tiingo", {
         params: { endpoint: activeEndpoint, symbol: searchSymbol }
       });
+      // 这里的 data.data 是因为后端代理返回的是 { data: [...] }
+      if (data.error) throw new Error(data.details || data.error);
       return data.data;
     },
+    retry: false, // 403 错误重试没意义
   });
 
   return (

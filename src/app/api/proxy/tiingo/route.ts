@@ -47,11 +47,15 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error(`Tiingo API Error (${response.status}):`, errorData);
-      throw new Error(`Tiingo API error: ${response.status}`);
+      console.error(`Tiingo API Error (Status ${response.status}):`, errorData);
+      return NextResponse.json({ 
+        error: `Tiingo API responded with ${response.status}`,
+        details: errorData 
+      }, { status: response.status });
     }
 
     const data = await response.json();
+    // 确保返回的 data 字段与前端 axios.get("/api/proxy/tiingo").data.data 匹配
     return NextResponse.json({ data });
   } catch (error: any) {
     console.error("Tiingo Proxy Error:", error);
