@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
 import * as cheerio from "cheerio";
 import { FINVIZ_HEADERS, FINVIZ_VIEWS } from "@/lib/finviz-constants";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const mode = searchParams.get("mode") || "screener"; // screener, insider, quote
+    const mode = searchParams.get("mode") || "screener";
     const ticker = searchParams.get("ticker");
     const filters = searchParams.get("f") || "";
     const view = searchParams.get("v") || FINVIZ_VIEWS.OVERVIEW;
@@ -18,17 +17,38 @@ export async function GET(request: Request) {
     } else if (mode === "quote" && ticker) {
       url = `https://finviz.com/quote.ashx?t=${ticker}`;
     } else {
-      url = `https://finviz.com/screener.ashx?v=${view}&f=${filters}&o=${sort}`;
+      const params = new URLSearchParams();
+      params.append("v", view);
+      if (filters) params.append("f", filters);
+      if (sort) params.append("o", sort);
+      url = `https://finviz.com/screener.ashx?${params.toString()}`;
     }
 
-    const response = await axios.get(url, { headers: FINVIZ_HEADERS });
-    const $ = cheerio.load(response.data);
+    console.log(`Fetching Finviz data from: ${url}`);
+
+    const response = await fetch(url, { 
+      headers: FINVIZ_HEADERS,
+      next: { revalidate: 300 } // 5分钟缓存
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Finviz fetch failed: ${response.status} ${response.statusText}`, errorText.substring(0, 200));
+      return NextResponse.json({ 
+        error: `Finviz API responded with ${response.status}`,
+        details: response.status === 403 ? "Access Forbidden (Bot detected)" : "Service Unavailable"
+      }, { status: response.status });
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
     if (mode === "insider") {
       const results: any[] = [];
       $(".insider-table tr").each((i, row) => {
-        if (i === 0) return; // Skip header
+        if (i === 0) return;
         const cols = $(row).find("td");
+        if (cols.length < 10) return;
         results.push({
           ticker: $(cols[0]).text().trim(),
           owner: $(cols[1]).text().trim(),
@@ -48,22 +68,28 @@ export async function GET(request: Request) {
     if (mode === "screener") {
       const results: any[] = [];
       const table = $(".screener-table");
+      if (table.length === 0) {
+        // 检查是否显示 "No results found"
+        if (html.includes("No results found")) {
+          return NextResponse.json({ data: [], message: "No results found" });
+        }
+        console.warn("Screener table not found in HTML response");
+        return NextResponse.json({ error: "Screener table not found. Finviz may have blocked the request." }, { status: 500 });
+      }
+
       const headers: string[] = [];
-      
-      // 提取表头
       table.find("tr").first().find("td").each((i, el) => {
         headers.push($(el).text().trim());
       });
 
-      // 提取数据行
       table.find("tr").each((i, row) => {
-        if (i === 0) return; // Skip header
+        if (i === 0) return;
         const item: any = {};
         $(row).find("td").each((j, el) => {
           const key = headers[j] || `col_${j}`;
           item[key] = $(el).text().trim();
         });
-        results.push(item);
+        if (Object.keys(item).length > 0) results.push(item);
       });
 
       return NextResponse.json({ data: results });
@@ -84,7 +110,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   } catch (error: any) {
-    console.error("Finviz Proxy Error:", error);
+    console.error("Finviz Proxy Unexpected Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

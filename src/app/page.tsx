@@ -3,10 +3,11 @@
 import { useState } from "react";
 import ScreenerContainer from "@/components/screener/screener-container";
 import FinvizContainer from "@/components/screener/finviz-container";
-import { BarChart3, PieChart } from "lucide-react";
+import SentimentContainer from "@/components/screener/sentiment-container";
+import { BarChart3, PieChart, Activity } from "lucide-react";
 import { clsx } from "clsx";
 
-type DataSource = "tradingview" | "finviz";
+type DataSource = "tradingview" | "finviz" | "sentiment";
 
 export default function Home() {
   const [source, setSource] = useState<DataSource>("tradingview");
@@ -42,6 +43,16 @@ export default function Home() {
               >
                 Finviz (Scraper)
               </button>
+              <button
+                onClick={() => setSource("sentiment")}
+                className={clsx(
+                  "px-4 py-1.5 rounded-md text-sm font-semibold transition-all flex items-center gap-2",
+                  source === "sentiment" ? "bg-white shadow-sm text-blue-600" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Activity className="w-4 h-4" />
+                VIX / Fear-Greed
+              </button>
             </div>
           </div>
           
@@ -52,7 +63,9 @@ export default function Home() {
       </nav>
 
       <div className="py-2">
-        {source === "tradingview" ? <ScreenerContainer /> : <FinvizContainer />}
+        {source === "tradingview" && <ScreenerContainer />}
+        {source === "finviz" && <FinvizContainer />}
+        {source === "sentiment" && <SentimentContainer />}
       </div>
     </main>
   );
