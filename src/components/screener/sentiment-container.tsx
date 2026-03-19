@@ -24,6 +24,16 @@ export default function SentimentContainer() {
     refetchInterval: 60000,
   });
 
+  // 获取历史数据
+  const { data: historyData } = useQuery({
+    queryKey: ["fear-greed-history"],
+    queryFn: async () => {
+      const { data } = await axios.get("/data/fear-greed-history.json");
+      return data;
+    },
+    enabled: viewMode === "timeline",
+  });
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
@@ -35,6 +45,9 @@ export default function SentimentContainer() {
 
   const { fearGreed } = data || {};
   const currentScore = fearGreed?.now || 16;
+
+  // 使用真实历史数据
+  const timelineRecords = historyData || [];
 
   // 根据 CNN 的量程逻辑计算旋转角度
   // 16 分对应 -63.836deg
@@ -151,7 +164,7 @@ export default function SentimentContainer() {
             className="h-[450px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={mockTimeline()}>
+              <LineChart data={timelineRecords}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} minTickGap={40} />
                 <YAxis domain={[0, 100]} axisLine={false} tickLine={false} orientation="right" tick={{ fontSize: 11, fill: '#94a3b8' }} />
@@ -195,9 +208,9 @@ function HistoryItem({ label, rating, score }: { label: string, rating: string, 
   );
 }
 
-function mockTimeline() {
-  return Array.from({ length: 100 }, (_, i) => ({
-    date: `2025-${(i % 12) + 1}-01`,
-    value: 20 + Math.random() * 60,
-  }));
+function getVixColor(score: number) {
+  if (score <= 25) return "text-red-600 border-red-200";
+  if (score <= 45) return "text-orange-500 border-orange-200";
+  if (score <= 55) return "text-yellow-600 border-yellow-200";
+  return "text-green-600 border-green-200";
 }
