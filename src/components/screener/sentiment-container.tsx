@@ -20,12 +20,12 @@ const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "ALL", value: "all" },
 ];
 
-const INDEX_CONFIG: Record<string, { label: string; color: string; ticker: string }> = {
-  spy: { label: "S&P 500 (SPX)", color: "#ef4444", ticker: "spy" },
-  qqq: { label: "Nasdaq 100 (NDQ)", color: "#3b82f6", ticker: "qqq" },
-  dia: { label: "Dow 30 (DJI)", color: "#8b5cf6", ticker: "dia" },
-  iwm: { label: "Russell 2000 (RUT)", color: "#f59e0b", ticker: "iwm" },
-  vix: { label: "VIX Volatility", color: "#ec4899", ticker: "vix" },
+const INDEX_CONFIG: Record<string, { label: string; short: string; color: string; ticker: string }> = {
+  spy: { label: "S&P 500 (SPX)", short: "SPX", color: "#ef4444", ticker: "spy" },
+  qqq: { label: "Nasdaq 100 (NDQ)", short: "NDQ", color: "#3b82f6", ticker: "qqq" },
+  dia: { label: "Dow 30 (DJI)", short: "DJI", color: "#8b5cf6", ticker: "dia" },
+  iwm: { label: "Russell 2000 (RUT)", short: "RUT", color: "#f59e0b", ticker: "iwm" },
+  vix: { label: "VIX Volatility", short: "VIX", color: "#ec4899", ticker: "vix" },
 };
 
 export default function SentimentContainer() {
@@ -33,7 +33,6 @@ export default function SentimentContainer() {
   const [timeRange, setTimeRange] = useState<TimeRange>("1y");
   const [selectedIndices, setSelectedIndices] = useState<ComparisonIndex[]>(["spy"]);
 
-  // 1. 获取实时情绪 (顶层调用)
   const { data: realTimeData, isLoading: isRealTimeLoading } = useQuery({
     queryKey: ["market-sentiment"],
     queryFn: async () => {
@@ -43,7 +42,6 @@ export default function SentimentContainer() {
     refetchInterval: 60000,
   });
 
-  // 2. 获取情绪历史 (顶层调用)
   const { data: historyData } = useQuery({
     queryKey: ["fear-greed-history"],
     queryFn: async () => {
@@ -53,7 +51,6 @@ export default function SentimentContainer() {
     enabled: viewMode === "timeline",
   });
 
-  // 3. 固定顺序定义四个指数查询 (核心修复：禁止在 useMemo/Map 内部调用)
   const qSpy = useQuery({
     queryKey: ["index-history", "spy"],
     queryFn: async () => (await axios.get("/data/spy-history.json")).data,
@@ -97,11 +94,7 @@ export default function SentimentContainer() {
     }
 
     const indexDataMap: Record<string, any[]> = {
-      spy: qSpy.data || [],
-      qqq: qQqq.data || [],
-      dia: qDia.data || [],
-      iwm: qIwm.data || [],
-      vix: qVix.data || []
+      spy: qSpy.data || [], qqq: qQqq.data || [], dia: qDia.data || [], iwm: qIwm.data || [], vix: qVix.data || []
     };
 
     return base.map((d: any) => {
@@ -118,9 +111,7 @@ export default function SentimentContainer() {
   }, [historyData, qSpy.data, qQqq.data, qDia.data, qIwm.data, qVix.data, timeRange, selectedIndices]);
 
   const toggleIndex = (idx: ComparisonIndex) => {
-    setSelectedIndices(prev => 
-      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
-    );
+    setSelectedIndices(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]);
   };
 
   if (isRealTimeLoading) {
@@ -143,22 +134,17 @@ export default function SentimentContainer() {
             <>
               <div className="bg-slate-100 p-1 rounded-xl flex gap-1 border border-slate-200/50">
                 {TIME_RANGES.map((r) => (
-                  <button key={r.value} onClick={() => setTimeRange(r.value)} 
-                    className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase", 
-                    timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>
-                    {r.label}
-                  </button>
+                  <button key={r.value} onClick={() => setTimeRange(r.value)} className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase", timeRange === r.value ? "bg-white shadow-sm text-blue-600" : "text-slate-400 hover:text-slate-600")}>{r.label}</button>
                 ))}
               </div>
               <div className="bg-slate-50 p-1 rounded-xl flex gap-1 border border-slate-100">
                 {Object.entries(INDEX_CONFIG).map(([key, config]) => (
                   <button key={key} onClick={() => toggleIndex(key as any)} 
-                    className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", 
-                    selectedIndices.includes(key as any) ? "bg-white shadow-sm" : "text-slate-400")}
+                    className={clsx("px-3 py-1.5 rounded-lg text-[10px] font-black transition-all uppercase flex items-center gap-2", selectedIndices.includes(key as any) ? "bg-white shadow-sm shadow-slate-200" : "text-slate-400")}
                     style={{ color: selectedIndices.includes(key as any) ? config.color : undefined }}
                   >
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: config.color }} />
-                    {config.label.split('(')[1].replace(')', '')}
+                    {config.short}
                   </button>
                 ))}
               </div>
@@ -214,14 +200,7 @@ export default function SentimentContainer() {
               <LineChart data={mergedData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} minTickGap={50} />
-                <YAxis 
-                  yAxisId="right" 
-                  orientation="right" 
-                  domain={selectedIndices.length === 0 ? ['auto', 'auto'] : [0, 100]} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} 
-                />
+                <YAxis yAxisId="right" orientation="right" domain={selectedIndices.length === 0 ? ['auto', 'auto'] : [0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} />
                 <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} hide={selectedIndices.length === 0} tick={{ fontSize: 10, fill: '#ef4444' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '12px' }} />
                 <Legend iconType="circle" />
@@ -233,7 +212,6 @@ export default function SentimentContainer() {
                     if (payload.value >= 70) return <circle cx={cx} cy={cy} r={3} fill="#22c55e" stroke="none" key={`dot-${payload.date}`} />;
                     return null;
                   }} activeDot={{ r: 6 }} name="Fear & Greed Index" />
-                
                 {selectedIndices.map(idx => (
                   <Line key={idx} yAxisId="left" type="monotone" dataKey={`price_${idx}`} stroke={INDEX_CONFIG[idx].color} strokeWidth={2} dot={false} name={INDEX_CONFIG[idx].label} strokeDasharray="5 5" connectNulls />
                 ))}
@@ -249,7 +227,6 @@ export default function SentimentContainer() {
 function HistoryItem({ label, score }: { label: string, score: any }) {
   const val = typeof score === 'object' ? score.score : score;
   const rating = typeof score === 'object' ? score.rating : "Neutral";
-
   return (
     <div className="relative flex items-center justify-between group py-1">
       <div className="z-10 bg-white pr-4">
