@@ -4,25 +4,24 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { 
-  BarChart2, Newspaper, Coins, Landmark, Zap, Search, HelpCircle, 
-  ChevronRight, ArrowUpRight, ArrowDownRight, Activity, Loader2
+  BarChart2, Newspaper, Coins, Landmark, Zap, Search,
+  ChevronRight, ArrowUpRight, Activity, Loader2, AlertCircle
 } from "lucide-react";
 import { clsx } from "clsx";
 
-type TiingoSection = "rest" | "websockets" | "utilities";
 type TiingoEndpoint = "daily" | "news" | "crypto" | "forex" | "iex" | "fundamentals";
 
 export default function TiingoContainer() {
   const [activeEndpoint, setActiveEndpoint] = useState<TiingoEndpoint>("news");
   const [searchSymbol, setSearchSymbol] = useState("AAPL");
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["tiingo-data", activeEndpoint, searchSymbol],
     queryFn: async () => {
       const { data } = await axios.get("/api/proxy/tiingo", {
         params: { endpoint: activeEndpoint, symbol: searchSymbol }
       });
-      return data;
+      return data.data;
     },
   });
 
@@ -38,8 +37,8 @@ export default function TiingoContainer() {
           <nav className="space-y-1">
             <MenuLink label="2.1 End-of-Day" icon={<BarChart2 className="w-4 h-4"/>} active={activeEndpoint === "daily"} onClick={() => setActiveEndpoint("daily")} />
             <MenuLink label="2.2 News" icon={<Newspaper className="w-4 h-4"/>} active={activeEndpoint === "news"} onClick={() => setActiveEndpoint("news")} />
-            <MenuLink label="2.3 Crypto" icon={<Coins className="w-4 h-4"/>} active={activeEndpoint === "crypto"} onClick={() => setActiveEndpoint("crypto")} />
-            <MenuLink label="2.4 Forex" icon={<Zap className="w-4 h-4"/>} active={activeEndpoint === "forex"} onClick={() => setActiveEndpoint("forex")} />
+            <MenuLink label="2.3 Crypto" icon={<Coins className="w-4 h-4"/>} active={activeEndpoint === "crypto"} onClick={() => { setSearchSymbol("BTCUSD"); setActiveEndpoint("crypto"); }} />
+            <MenuLink label="2.4 Forex" icon={<Zap className="w-4 h-4"/>} active={activeEndpoint === "forex"} onClick={() => { setSearchSymbol("AUDUSD"); setActiveEndpoint("forex"); }} />
             <MenuLink label="2.5 IEX" icon={<Landmark className="w-4 h-4"/>} active={activeEndpoint === "iex"} onClick={() => setActiveEndpoint("iex")} />
             <MenuLink label="2.6 Fundamentals" icon={<Activity className="w-4 h-4"/>} active={activeEndpoint === "fundamentals"} onClick={() => setActiveEndpoint("fundamentals")} />
           </nav>
@@ -51,18 +50,8 @@ export default function TiingoContainer() {
             <span>3. Websockets</span>
           </div>
           <nav className="space-y-1">
-            <MenuLink label="3.1 Crypto" icon={<Coins className="w-4 h-4"/>} active={false} onClick={() => {}} />
-            <MenuLink label="3.2 Forex" icon={<Zap className="w-4 h-4"/>} active={false} onClick={() => {}} />
-            <MenuLink label="3.3 IEX" icon={<Landmark className="w-4 h-4"/>} active={false} onClick={() => {}} />
+            <div className="px-4 py-2 text-xs text-slate-400 font-medium italic">Streaming Coming Soon...</div>
           </nav>
-        </div>
-
-        <div className="mt-auto pt-8">
-          <div className="flex items-center gap-2 text-slate-500 font-bold text-lg mb-4">
-            <Search className="w-5 h-5" />
-            <span>4. Utilities</span>
-          </div>
-          <MenuLink label="4.1 Search" icon={<Search className="w-4 h-4"/>} active={false} onClick={() => {}} />
         </div>
       </aside>
 
@@ -71,7 +60,7 @@ export default function TiingoContainer() {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">
-              {activeEndpoint} Analysis
+              {activeEndpoint === "daily" ? "Historical Prices" : activeEndpoint}
             </h2>
             <p className="text-slate-400 text-sm mt-1">Real-time data powered by Tiingo API</p>
           </div>
@@ -82,7 +71,7 @@ export default function TiingoContainer() {
               value={searchSymbol}
               onChange={(e) => setSearchSymbol(e.target.value.toUpperCase())}
               className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="Ticker (e.g. AAPL)"
+              placeholder="Symbol (e.g. AAPL, BTCUSD)"
             />
             <button 
               onClick={() => refetch()}
@@ -94,30 +83,24 @@ export default function TiingoContainer() {
         </header>
 
         {/* Data Display Content */}
-        <section className="bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[500px] p-6">
+        <section className="bg-white rounded-2xl border border-slate-100 shadow-sm min-h-[500px] p-6 relative">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full py-32 text-slate-300">
               <Loader2 className="w-12 h-12 animate-spin mb-4" />
               <span>Fetching from Tiingo...</span>
             </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center h-full py-32 text-red-400">
+              <AlertCircle className="w-12 h-12 mb-4" />
+              <span>{error.message}</span>
+            </div>
           ) : (
             <div className="animate-in fade-in duration-500">
               {activeEndpoint === "news" && <NewsDisplay news={data} />}
               {activeEndpoint === "fundamentals" && <FundamentalsDisplay data={data} />}
+              {activeEndpoint === "daily" && <HistoricalDisplay data={data} />}
               {(activeEndpoint === "crypto" || activeEndpoint === "iex" || activeEndpoint === "forex") && (
-                <pre className="text-xs bg-slate-50 p-4 rounded-xl overflow-auto max-h-[600px]">
-                  {JSON.stringify(data, null, 2)}
-                </pre>
-              )}
-              {activeEndpoint === "daily" && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {data?.map((d: any, i: number) => (
-                    <div key={i} className="p-4 border rounded-xl">
-                      <div className="text-xs text-slate-400 font-bold mb-2">{d.date.split('T')[0]}</div>
-                      <div className="text-lg font-black text-slate-800">${d.close}</div>
-                    </div>
-                  ))}
-                </div>
+                <RawJsonDisplay data={data} />
               )}
             </div>
           )}
@@ -144,6 +127,17 @@ function MenuLink({ label, icon, active, onClick }: { label: string, icon: any, 
       </div>
       <ChevronRight className={clsx("w-4 h-4 opacity-0 transition-all", active ? "opacity-100 translate-x-0" : "group-hover:opacity-100 group-hover:translate-x-1")} />
     </button>
+  );
+}
+
+function RawJsonDisplay({ data }: { data: any }) {
+  return (
+    <div className="space-y-4">
+      <div className="text-xs font-bold text-slate-400 uppercase">Raw Response</div>
+      <pre className="text-xs bg-slate-900 text-emerald-400 p-6 rounded-xl overflow-auto max-h-[600px] border border-slate-800 shadow-2xl">
+        {JSON.stringify(data, null, 2)}
+      </pre>
+    </div>
   );
 }
 
@@ -179,7 +173,7 @@ function NewsDisplay({ news }: { news: any[] }) {
 }
 
 function FundamentalsDisplay({ data }: { data: any[] }) {
-  if (!data || !Array.isArray(data)) return null;
+  if (!data || !Array.isArray(data)) return <div className="text-center py-24 text-slate-400">No fundamental data available for this symbol.</div>;
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left">
@@ -189,7 +183,7 @@ function FundamentalsDisplay({ data }: { data: any[] }) {
             <th className="py-4">Market Cap</th>
             <th className="py-4">PE Ratio</th>
             <th className="py-4">PB Ratio</th>
-            <th className="py-4">Enterprise Value</th>
+            <th className="py-4">Revenue (TTM)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
@@ -197,13 +191,32 @@ function FundamentalsDisplay({ data }: { data: any[] }) {
             <tr key={i} className="text-sm font-bold text-slate-700 hover:bg-slate-50/50">
               <td className="py-4 font-mono">{row.date}</td>
               <td className="py-4">{(row.marketCap / 1e9).toFixed(2)}B</td>
-              <td className="py-4 text-purple-600">{row.peRatio?.toFixed(2)}</td>
-              <td className="py-4">{row.pbRatio?.toFixed(2)}</td>
-              <td className="py-4">{(row.enterpriseVal / 1e9).toFixed(2)}B</td>
+              <td className="py-4 text-purple-600">{row.peRatio?.toFixed(2) || 'N/A'}</td>
+              <td className="py-4">{row.pbRatio?.toFixed(2) || 'N/A'}</td>
+              <td className="py-4">{(row.revenueQ / 1e9).toFixed(2) || 'N/A'}B</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function HistoricalDisplay({ data }: { data: any[] }) {
+  if (!data || !Array.isArray(data)) return null;
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {data.map((d: any, i: number) => (
+        <div key={i} className="p-4 border border-slate-100 rounded-xl hover:shadow-md transition-all group">
+          <div className="text-[10px] text-slate-400 font-bold mb-2 group-hover:text-purple-500">{d.date.split('T')[0]}</div>
+          <div className="flex justify-between items-end">
+            <div className="text-xl font-black text-slate-800">${d.close.toFixed(2)}</div>
+            <div className={clsx("text-xs font-bold", d.close >= d.open ? "text-green-500" : "text-red-500")}>
+              {((d.close - d.open) / d.open * 100).toFixed(2)}%
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
