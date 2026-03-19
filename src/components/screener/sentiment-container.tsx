@@ -179,7 +179,7 @@ export default function SentimentContainer() {
               <LineChart data={mergedData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} minTickGap={50} />
-                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#3b82f6', fontWeight: 'bold' }} hide={compareWith === "none"} />
+                <YAxis yAxisId="left" orientation="left" domain={['auto', 'auto']} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#ef4444', fontWeight: 'bold' }} hide={compareWith === "none"} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#1e293b', fontWeight: 'bold' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', fontSize: '12px' }} />
                 <ReferenceLine yAxisId="right" y={75} stroke="#cbd5e1" strokeDasharray="3 3" label={{ position: 'right', value: 'Greed', fill: '#94a3b8', fontSize: 9 }} />
@@ -200,7 +200,7 @@ export default function SentimentContainer() {
                   name="Fear & Greed" 
                 />
                 {compareWith !== "none" && (
-                  <Line yAxisId="left" type="monotone" dataKey="indexPrice" stroke="#3b82f6" strokeWidth={2} dot={false} name={compareWith.toUpperCase()} strokeDasharray="5 5" />
+                  <Line yAxisId="left" type="monotone" dataKey="indexPrice" stroke="#ef4444" strokeWidth={2} dot={false} name={compareWith.toUpperCase()} strokeDasharray="5 5" />
                 )}
               </LineChart>
             </ResponsiveContainer>
